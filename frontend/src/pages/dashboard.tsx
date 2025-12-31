@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../utils/auth';
-import { apiService } from '../services/api';
+import { apiService, Todo } from '../services/api';
 import TodoList from '../components/todos/TodoList';
 import AddTodo from '../components/todos/AddTodo';
 
 const DashboardPage: React.FC = () => {
   const { state, signout } = useAuth();
-  const [todos, setTodos] = useState<any[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,7 +23,8 @@ const DashboardPage: React.FC = () => {
         if (response.error) {
           setError(response.error);
         } else {
-          setTodos(response.data?.todos || response.data || []);
+          const todoList = Array.isArray(response.data) ? response.data : response.data?.todos;
+          setTodos(todoList || []);
         }
       } catch (err: any) {
         setError(err.message || 'Error fetching todos');
@@ -42,7 +43,7 @@ const DashboardPage: React.FC = () => {
       const response = await apiService.createTodo(title, description);
       if (response.error) {
         setError(response.error);
-      } else {
+      } else if (response.data) {
         // Add the new todo to the list
         setTodos([...todos, response.data]);
       }
@@ -56,9 +57,9 @@ const DashboardPage: React.FC = () => {
       const response = await apiService.updateTodo(id, updates.title, updates.description, updates.completed);
       if (response.error) {
         setError(response.error);
-      } else {
+      } else if (response.data) {
         // Update the todo in the list
-        setTodos(todos.map(todo => todo.id === id ? response.data : todo));
+        setTodos(todos.map(todo => todo.id === id ? response.data! : todo));
       }
     } catch (err: any) {
       setError(err.message || 'Error updating todo');
@@ -70,9 +71,9 @@ const DashboardPage: React.FC = () => {
       const response = await apiService.updateTodoStatus(id, completed);
       if (response.error) {
         setError(response.error);
-      } else {
+      } else if (response.data) {
         // Update the todo in the list
-        setTodos(todos.map(todo => todo.id === id ? response.data : todo));
+        setTodos(todos.map(todo => todo.id === id ? response.data! : todo));
       }
     } catch (err: any) {
       setError(err.message || 'Error updating todo status');

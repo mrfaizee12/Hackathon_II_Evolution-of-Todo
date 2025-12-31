@@ -10,6 +10,32 @@ interface ApiResponse<T> {
   status: number;
 }
 
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+export interface GetTodosResponse {
+  todos: Todo[];
+}
+
 class ApiService {
   private token: string | null = null;
 
@@ -89,56 +115,56 @@ class ApiService {
   }
 
   // Authentication methods
-  async signup(email: string, password: string, name: string) {
+  async signup(email: string, password: string, name: string): Promise<ApiResponse<AuthResponse>> {
     return this.request('/auth/signup', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
     });
   }
 
-  async signin(email: string, password: string) {
+  async signin(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
     return this.request('/auth/signin', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
-  async signout() {
+  async signout(): Promise<ApiResponse<void>> {
     return this.request('/auth/signout', {
       method: 'POST',
     });
   }
 
-  async getMe() {
+  async getMe(): Promise<ApiResponse<User>> {
     return this.request('/auth/me');
   }
 
   // Todo methods
-  async getTodos() {
+  async getTodos(): Promise<ApiResponse<GetTodosResponse>> {
     return this.request('/todos');
   }
 
-  async createTodo(title: string, description?: string) {
+  async createTodo(title: string, description?: string): Promise<ApiResponse<Todo>> {
     return this.request('/todos', {
       method: 'POST',
       body: JSON.stringify({ title, description }),
     });
   }
 
-  async updateTodo(id: string, title?: string, description?: string, completed?: boolean) {
+  async updateTodo(id: string, title?: string, description?: string, completed?: boolean): Promise<ApiResponse<Todo>> {
     return this.request(`/todos/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ title, description, completed }),
     });
   }
 
-  async deleteTodo(id: string) {
+  async deleteTodo(id: string): Promise<ApiResponse<void>> {
     return this.request(`/todos/${id}`, {
       method: 'DELETE',
     });
   }
 
-  async updateTodoStatus(id: string, completed: boolean) {
+  async updateTodoStatus(id: string, completed: boolean): Promise<ApiResponse<Todo>> {
     return this.request(`/todos/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ completed }),
