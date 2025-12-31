@@ -1,14 +1,14 @@
 <!--
 Sync Impact Report
 ==================
-Version: 0.0.0 → 1.0.0
-Change Type: MAJOR - Initial ratification of Evolution of Todo global constitution
+Version: 1.0.0 → 1.1.0
+Change Type: MINOR - Amendment to reflect Phase II requirements and UI/UX policy
 
-Sections Added:
-- Core Principles (5 principles: Spec-Driven Development, Agent Behavior, Phase Governance, Technology Stack, Quality Principles)
-- Technology Constraints
-- Development Workflow
-- Governance
+Changes Made:
+- Updated Technology Stack section to specify Phase II technologies (Python REST API, Neon Serverless PostgreSQL, SQLModel, Next.js, Better Auth)
+- Enhanced Phase Governance to detail Phase I and Phase II scope and requirements
+- Added UI/UX Requirements section to Technology Constraints for Phase II+ features
+- Updated Database Requirements to specify Neon Serverless PostgreSQL and SQLModel or equivalent
 
 Templates Status:
 - ✅ .specify/templates/plan-template.md - Reviewed, aligns with constitution
@@ -19,10 +19,9 @@ Follow-up Actions:
 - None - all placeholders filled, all templates aligned
 
 Notes:
-- This is the initial ratification of the constitution for the Evolution of Todo project
-- Covers all phases (Phase I through Phase V)
-- Establishes Spec-Driven Development as mandatory
-- Defines clear agent behavior rules and phase governance
+- Amendment reflects Phase II requirements as specified
+- Preserves phase isolation and acts as authoritative technology policy
+- Maintains all existing Phase I requirements while adding Phase II specifics
 -->
 
 # Evolution of Todo Project Constitution
@@ -68,7 +67,16 @@ Notes:
 The Evolution of Todo project consists of five phases:
 
 - **Phase I**: Basic Todo CRUD with local persistence
+  - Backend: In-memory console application only
+  - UI/UX: Console-based interface only
 - **Phase II**: Multi-user support with authentication and cloud persistence
+  - Backend: Python REST API
+  - Database: Neon Serverless PostgreSQL
+  - ORM/Data layer: SQLModel or equivalent
+  - Frontend: Next.js (React, TypeScript)
+  - Authentication: Better Auth (signup/signin)
+  - Architecture: Full-stack web application
+  - UI/UX: Modern, professional, hackathon-quality UI with gradient-based colorful theme, subtle animations (hover effects, transitions, loading states), smooth page transitions, clean card-based layouts and spacing. UI enhancements must be visual only and must not change functionality.
 - **Phase III**: Real-time collaboration, notifications, and advanced search
 - **Phase IV**: Agent orchestration, MCP integration, and workflow automation
 - **Phase V**: Distributed architecture with event sourcing and CQRS
@@ -85,11 +93,11 @@ The Evolution of Todo project consists of five phases:
 
 **The following technology constraints are mandatory across all phases:**
 
-**Backend**:
+**Backend** (Phase II+):
 - Language: Python 3.11+
-- Framework: FastAPI (async web framework)
-- ORM: SQLModel (Pydantic + SQLAlchemy)
-- Database: Neon DB (PostgreSQL-compatible, serverless)
+- Framework: FastAPI (async web framework) for REST API
+- ORM: SQLModel (Pydantic + SQLAlchemy) or equivalent
+- Database: Neon Serverless PostgreSQL
 - Agent Framework: OpenAI Agents SDK (Phase IV+)
 - MCP: Model Context Protocol servers (Phase IV+)
 
@@ -97,6 +105,12 @@ The Evolution of Todo project consists of five phases:
 - Framework: Next.js (React with SSR/SSG)
 - Language: TypeScript
 - State Management: To be specified per phase requirements
+
+**Authentication** (Phase II+):
+- Solution: Better Auth (signup/signin)
+
+**Architecture** (Phase II+):
+- Full-stack web application
 
 **Infrastructure** (Phase III+):
 - Containerization: Docker
@@ -166,8 +180,8 @@ The Evolution of Todo project consists of five phases:
 - MUST document all direct dependencies with purpose
 
 **Database Requirements**:
-- Primary database: Neon DB (PostgreSQL 15+)
-- MUST use SQLModel for ORM operations
+- Primary database: Neon Serverless PostgreSQL
+- MUST use SQLModel or equivalent for ORM operations
 - MUST version control all schema migrations
 - MUST support rollback for all migrations
 
@@ -182,6 +196,14 @@ The Evolution of Todo project consists of five phases:
 - MUST provide setup documentation in quickstart.md
 - MUST use consistent code formatting (Black for Python, Prettier for TypeScript)
 - MUST enforce linting (ruff for Python, ESLint for TypeScript)
+
+**UI/UX Requirements** (Phase II+):
+- MUST implement modern, professional, hackathon-quality UI
+- MUST use gradient-based colorful theme across the application
+- MAY include subtle animations (hover effects, transitions, loading states)
+- MAY implement smooth page transitions
+- MUST use clean card-based layouts and spacing
+- UI enhancements MUST be visual only and MUST NOT change functionality
 
 ## Development Workflow
 
@@ -294,4 +316,4 @@ The Evolution of Todo project consists of five phases:
 - [ ] ADRs created for significant decisions (if applicable)
 - [ ] PHR created for the work
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-28 | **Last Amended**: 2025-12-28
+**Version**: 1.1.0 | **Ratified**: 2025-12-28 | **Last Amended**: 2025-12-29

@@ -41,3 +41,23 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Node.js / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env.production
+frontend/out/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Debug/test files
+backend/debug_db.py
+backend/test_user_creation.py
+backend/add_missing_columns.py
+
+# Windows artifacts
+nul

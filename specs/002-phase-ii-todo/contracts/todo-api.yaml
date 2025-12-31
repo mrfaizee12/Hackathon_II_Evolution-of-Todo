@@ -1,0 +1,145 @@
+# Todo API Contract
+
+## Overview
+REST API for todo management operations with user authentication
+
+## Base URL
+`/api/v1`
+
+## Authentication
+All endpoints require valid authentication token in `Authorization: Bearer <token>` header
+
+## Endpoints
+
+### Create Todo
+- **Method**: `POST`
+- **Path**: `/todos`
+- **Description**: Create a new todo for the authenticated user
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+  - Body:
+    ```json
+    {
+      "title": "string (required, max 255)",
+      "description": "string (optional, max 1000)"
+    }
+    ```
+- **Responses**:
+  - `201 Created`: Todo created successfully
+    ```json
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string",
+      "completed": false,
+      "user_id": "uuid",
+      "created_at": "datetime",
+      "updated_at": "datetime"
+    }
+    ```
+  - `400 Bad Request`: Invalid input data
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `500 Internal Server Error`: Server error
+
+### Retrieve All Todos
+- **Method**: `GET`
+- **Path**: `/todos`
+- **Description**: Get all todos for the authenticated user
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`
+- **Responses**:
+  - `200 OK`: Todos retrieved successfully
+    ```json
+    {
+      "todos": [
+        {
+          "id": "uuid",
+          "title": "string",
+          "description": "string",
+          "completed": "boolean",
+          "user_id": "uuid",
+          "created_at": "datetime",
+          "updated_at": "datetime"
+        }
+      ]
+    }
+    ```
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `500 Internal Server Error`: Server error
+
+### Update Todo
+- **Method**: `PUT`
+- **Path**: `/todos/{todo_id}`
+- **Description**: Update an existing todo for the authenticated user
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+  - Path Parameter: `todo_id` (UUID)
+  - Body:
+    ```json
+    {
+      "title": "string (optional)",
+      "description": "string (optional)",
+      "completed": "boolean (optional)"
+    }
+    ```
+- **Responses**:
+  - `200 OK`: Todo updated successfully
+    ```json
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string",
+      "completed": "boolean",
+      "user_id": "uuid",
+      "created_at": "datetime",
+      "updated_at": "datetime"
+    }
+    ```
+  - `400 Bad Request`: Invalid input data
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `404 Not Found`: Todo not found or doesn't belong to user
+  - `500 Internal Server Error`: Server error
+
+### Delete Todo
+- **Method**: `DELETE`
+- **Path**: `/todos/{todo_id}`
+- **Description**: Delete a todo for the authenticated user
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`
+  - Path Parameter: `todo_id` (UUID)
+- **Responses**:
+  - `204 No Content`: Todo deleted successfully
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `404 Not Found`: Todo not found or doesn't belong to user
+  - `500 Internal Server Error`: Server error
+
+### Mark Todo Complete/Incomplete
+- **Method**: `PATCH`
+- **Path**: `/todos/{todo_id}/status`
+- **Description**: Update the completion status of a todo
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+  - Path Parameter: `todo_id` (UUID)
+  - Body:
+    ```json
+    {
+      "completed": "boolean (required)"
+    }
+    ```
+- **Responses**:
+  - `200 OK`: Todo status updated successfully
+    ```json
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string",
+      "completed": "boolean",
+      "user_id": "uuid",
+      "created_at": "datetime",
+      "updated_at": "datetime"
+    }
+    ```
+  - `400 Bad Request`: Invalid input data
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `404 Not Found`: Todo not found or doesn't belong to user
+  - `500 Internal Server Error`: Server error

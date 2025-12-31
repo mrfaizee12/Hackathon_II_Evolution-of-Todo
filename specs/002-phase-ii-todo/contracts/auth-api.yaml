@@ -1,0 +1,104 @@
+# Authentication API Contract
+
+## Overview
+Authentication endpoints using Better Auth for user signup and signin
+
+## Base URL
+`/api/v1`
+
+## Endpoints
+
+### User Signup
+- **Method**: `POST`
+- **Path**: `/auth/signup`
+- **Description**: Create a new user account
+- **Request**:
+  - Headers: `Content-Type: application/json`
+  - Body:
+    ```json
+    {
+      "email": "string (required, valid email format)",
+      "password": "string (required, min 8 characters)"
+    }
+    ```
+- **Responses**:
+  - `201 Created`: User created successfully
+    ```json
+    {
+      "user": {
+        "id": "uuid",
+        "email": "string",
+        "created_at": "datetime"
+      },
+      "token": "string (JWT token for authentication)"
+    }
+    ```
+  - `400 Bad Request`: Invalid input data (invalid email, weak password)
+  - `409 Conflict`: User with email already exists
+  - `500 Internal Server Error`: Server error
+
+### User Signin
+- **Method**: `POST`
+- **Path**: `/auth/signin`
+- **Description**: Authenticate existing user and return token
+- **Request**:
+  - Headers: `Content-Type: application/json`
+  - Body:
+    ```json
+    {
+      "email": "string (required, valid email format)",
+      "password": "string (required)"
+    }
+    ```
+- **Responses**:
+  - `200 OK`: Authentication successful
+    ```json
+    {
+      "user": {
+        "id": "uuid",
+        "email": "string",
+        "created_at": "datetime"
+      },
+      "token": "string (JWT token for authentication)"
+    }
+    ```
+  - `400 Bad Request`: Invalid input data
+  - `401 Unauthorized`: Invalid credentials
+  - `500 Internal Server Error`: Server error
+
+### User Signout
+- **Method**: `POST`
+- **Path**: `/auth/signout`
+- **Description**: Invalidate user session/token
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`
+- **Responses**:
+  - `200 OK`: Successfully signed out
+    ```json
+    {
+      "message": "Successfully signed out"
+    }
+    ```
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `500 Internal Server Error`: Server error
+
+### Get Current User
+- **Method**: `GET`
+- **Path**: `/auth/me`
+- **Description**: Get information about the currently authenticated user
+- **Request**:
+  - Headers: `Authorization: Bearer <token>`
+- **Responses**:
+  - `200 OK`: User information retrieved successfully
+    ```json
+    {
+      "user": {
+        "id": "uuid",
+        "email": "string",
+        "created_at": "datetime",
+        "updated_at": "datetime"
+      }
+    }
+    ```
+  - `401 Unauthorized`: Invalid or missing authentication token
+  - `500 Internal Server Error`: Server error
