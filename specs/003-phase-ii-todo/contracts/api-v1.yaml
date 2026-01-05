@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: Evolution of Todo - Phase II API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /todos:
+    get:
+      summary: List todos for authenticated user
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search keyword
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - name: status
+          in: query
+          schema:
+            type: boolean
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [due_date, priority, title, created_at]
+      responses:
+        '200':
+          description: List of todos
+    post:
+      summary: Create a new todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCreate'
+      responses:
+        '201':
+          description: Created
+  /todos/{id}:
+    get:
+      summary: Get todo details
+    patch:
+      summary: Update todo
+    delete:
+      summary: Delete todo
+
+components:
+  schemas:
+    TodoCreate:
+      type: object
+      required: [title]
+      properties:
+        title: {type: string}
+        priority: {type: string, enum: [low, medium, high]}
+        tags: {type: string}
+        due_date: {type: string, format: date-time}

@@ -1,0 +1,307 @@
+openapi: 3.0.3
+info:
+  title: Todo API - Phase II Intermediate
+  description: API for managing todos with advanced features like priority, tags, search, and filtering
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /api/todos:
+    get:
+      summary: List todos with advanced filtering and search
+      description: Retrieve a list of todos with optional search, filtering, and sorting capabilities
+      parameters:
+        - name: search
+          in: query
+          description: Search keyword to match against title and description
+          required: false
+          schema:
+            type: string
+        - name: priority
+          in: query
+          description: Filter by priority level
+          required: false
+          schema:
+            type: string
+            enum: [high, medium, low]
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated list)
+          required: false
+          schema:
+            type: string
+        - name: due_date_from
+          in: query
+          description: Filter by due date range start (ISO 8601 format)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: due_date_to
+          in: query
+          description: Filter by due date range end (ISO 8601 format)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: completed
+          in: query
+          description: Filter by completion status
+          required: false
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          description: Sort by field
+          required: false
+          schema:
+            type: string
+            enum: [priority, created_at, due_date, title]
+        - name: order
+          in: query
+          description: Sort order
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: List of todos matching the criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todos:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Todo'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized - authentication required
+      security:
+        - bearerAuth: []
+    post:
+      summary: Create a new todo
+      description: Create a new todo with optional priority, tags, and due date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCreate'
+      responses:
+        '201':
+          description: Todo created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized - authentication required
+      security:
+        - bearerAuth: []
+
+  /api/todos/{id}:
+    get:
+      summary: Get a specific todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Todo details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '401':
+          description: Unauthorized - authentication required
+        '404':
+          description: Todo not found
+      security:
+        - bearerAuth: []
+    put:
+      summary: Update a todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoUpdate'
+      responses:
+        '200':
+          description: Todo updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized - authentication required
+        '404':
+          description: Todo not found
+      security:
+        - bearerAuth: []
+    delete:
+      summary: Delete a todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Todo deleted successfully
+        '401':
+          description: Unauthorized - authentication required
+        '404':
+          description: Todo not found
+      security:
+        - bearerAuth: []
+
+  /api/todos/{id}/toggle_complete:
+    patch:
+      summary: Toggle completion status of a todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Todo completion status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '401':
+          description: Unauthorized - authentication required
+        '404':
+          description: Todo not found
+      security:
+        - bearerAuth: []
+
+components:
+  schemas:
+    Todo:
+      type: object
+      required:
+        - id
+        - title
+        - completed
+        - created_at
+        - updated_at
+        - user_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        completed:
+          type: boolean
+        priority:
+          type: string
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 10
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        user_id:
+          type: string
+          format: uuid
+
+    TodoCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        priority:
+          type: string
+          enum: [high, medium, low]
+          default: medium
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 10
+        due_date:
+          type: string
+          format: date-time
+
+    TodoUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 1000
+        priority:
+          type: string
+          enum: [high, medium, low]
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 10
+        due_date:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

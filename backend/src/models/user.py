@@ -1,7 +1,11 @@
 from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 import uuid
+
+# Handle circular import for relationship
+if TYPE_CHECKING:
+    from .todo import Todo
 
 class UserBase(SQLModel):
     email: str = Field(unique=True, nullable=False, max_length=255)

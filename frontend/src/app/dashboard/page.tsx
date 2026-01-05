@@ -1,25 +1,49 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../utils/auth';
-import { apiService, Todo } from '../services/api';
-import TodoList from '../components/todos/TodoList';
-import AddTodo from '../components/todos/AddTodo';
+import Link from 'next/link';
+import { useAuth } from '../../utils/auth';
+import { apiService, Todo } from '../../services/api';
+import TodoForm from '../../components/TodoForm';
+import TodoItem from '../../components/TodoItem';
+import TodoFilters from '../../components/TodoFilters';
+import SearchBar from '../../components/SearchBar';
 
 const DashboardPage: React.FC = () => {
   const { state, signout } = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [filters, setFilters] = useState({
+    search: '',
+    priority: '',
+    tags: '',
+    dueDateFrom: '',
+    dueDateTo: '',
+    completed: '',
+    sort: '',
+    order: '',
+  });
 
-  // Fetch todos when component mounts or when todos are updated
+  // Fetch todos with current filters
   useEffect(() => {
     const fetchTodos = async () => {
       setLoading(true);
       setError('');
 
       try {
-        const response = await apiService.getTodos();
+        const response = await apiService.getTodos({
+          search: filters.search || undefined,
+          priority: filters.priority || undefined,
+          tags: filters.tags || undefined,
+          due_date_from: filters.dueDateFrom || undefined,
+          due_date_to: filters.dueDateTo || undefined,
+          completed: filters.completed ? filters.completed === 'true' : undefined,
+          sort: filters.sort || undefined,
+          order: filters.order as 'asc' | 'desc' || undefined,
+        });
+
         if (response.error) {
           setError(response.error);
         } else {
@@ -36,11 +60,17 @@ const DashboardPage: React.FC = () => {
     if (state.isAuthenticated) {
       fetchTodos();
     }
-  }, [state.isAuthenticated]);
+  }, [state.isAuthenticated, filters]);
 
-  const handleAddTodo = async (title: string, description?: string) => {
+  const handleAddTodo = async (todoData: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
     try {
-      const response = await apiService.createTodo(title, description);
+      const response = await apiService.createTodo(
+        todoData.title,
+        todoData.description,
+        todoData.priority,
+        todoData.tags,
+        todoData.due_date
+      );
       if (response.error) {
         setError(response.error);
       } else if (response.data) {
@@ -52,31 +82,35 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleUpdateTodo = async (id: string, updates: { title?: string; description?: string; completed?: boolean }) => {
+  const handleUpdateTodo = async (id: string, updates: Partial<Todo>) => {
     try {
-      const response = await apiService.updateTodo(id, updates.title, updates.description, updates.completed);
+      const response = await apiService.updateTodo(id, updates);
       if (response.error) {
         setError(response.error);
       } else if (response.data) {
         // Update the todo in the list
         setTodos(todos.map(todo => todo.id === id ? response.data! : todo));
+        setEditingTodo(null); // Clear editing state
       }
     } catch (err: any) {
       setError(err.message || 'Error updating todo');
     }
   };
 
-  const handleToggleTodo = async (id: string, completed: boolean) => {
-    try {
-      const response = await apiService.updateTodoStatus(id, completed);
-      if (response.error) {
-        setError(response.error);
-      } else if (response.data) {
-        // Update the todo in the list
-        setTodos(todos.map(todo => todo.id === id ? response.data! : todo));
+  const handleToggleTodo = async (id: string) => {
+    const todo = todos.find(t => t.id === id);
+    if (todo) {
+      try {
+        const response = await apiService.updateTodoStatus(id, !todo.completed);
+        if (response.error) {
+          setError(response.error);
+        } else if (response.data) {
+          // Update the todo in the list
+          setTodos(todos.map(todo => todo.id === id ? response.data! : todo));
+        }
+      } catch (err: any) {
+        setError(err.message || 'Error updating todo status');
       }
-    } catch (err: any) {
-      setError(err.message || 'Error updating todo status');
     }
   };
 
@@ -92,6 +126,25 @@ const DashboardPage: React.FC = () => {
     } catch (err: any) {
       setError(err.message || 'Error deleting todo');
     }
+  };
+
+  const handleEditTodo = (todo: Todo) => {
+    setEditingTodo(todo);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTodo(null);
+  };
+
+  const handleFilterChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+  };
+
+  const handleSearch = (query: string) => {
+    setFilters(prev => ({
+      ...prev,
+      search: query,
+    }));
   };
 
   // Show loading state while authentication is being checked
@@ -126,7 +179,7 @@ const DashboardPage: React.FC = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Please sign in to continue</h1>
           <p className="text-gray-600 mb-6">You need to be authenticated to access the dashboard</p>
-          <a href="/signin" className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
+          <a href="/auth/signin" className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg">
             Go to Sign In
           </a>
         </div>
@@ -169,19 +222,35 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
+        {/* Search Bar */}
+        <SearchBar onSearch={handleSearch} />
+
+        {/* Filters */}
+        <TodoFilters onFilterChange={handleFilterChange} />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column - Add Todo */}
+          {/* Left column - Add Todo or Edit Todo */}
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center mb-4">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 w-8 h-8 rounded-lg flex items-center justify-center mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    {editingTodo ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    )}
                   </svg>
                 </div>
-                <h2 className="text-xl font-semibold text-gray-800">Add New Todo</h2>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {editingTodo ? 'Edit Todo' : 'Add New Todo'}
+                </h2>
               </div>
-              <AddTodo onAddTodo={handleAddTodo} />
+              <TodoForm
+                todo={editingTodo || undefined}
+                onSubmit={editingTodo ? (todoData) => handleUpdateTodo(editingTodo.id, todoData) : handleAddTodo}
+                onCancel={editingTodo ? handleCancelEdit : undefined}
+              />
             </div>
           </div>
 
@@ -221,12 +290,15 @@ const DashboardPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <TodoList
-                    todos={todos}
-                    onUpdateTodo={handleUpdateTodo}
-                    onToggleTodo={handleToggleTodo}
-                    onDeleteTodo={handleDeleteTodo}
-                  />
+                  {todos.map(todo => (
+                    <TodoItem
+                      key={todo.id}
+                      todo={todo}
+                      onToggle={() => handleToggleTodo(todo.id)}
+                      onEdit={handleEditTodo}
+                      onDelete={handleDeleteTodo}
+                    />
+                  ))}
                 </div>
               )}
             </div>

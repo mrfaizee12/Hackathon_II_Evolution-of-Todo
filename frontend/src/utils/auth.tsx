@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
-import { useRouter } from 'next/router';
 import { apiService } from '../services/api';
 
 interface AuthState {
@@ -50,7 +49,6 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
-  const router = useRouter();
 
   const checkAuthStatus = async () => {
     const token = apiService.getToken();
@@ -90,7 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (error: any) {
       dispatch({ type: 'AUTH_FAILURE' });
       throw error;
@@ -118,7 +116,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       dispatch({ type: 'AUTH_SUCCESS', payload: signinResponse.data.user });
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (error: any) {
       dispatch({ type: 'AUTH_FAILURE' });
       throw error;
@@ -130,11 +128,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await apiService.signout();
       apiService.clearToken();
       dispatch({ type: 'SIGNOUT' });
-      router.push('/signin');
+      window.location.href = '/auth/signin';
     } catch (error) {
       apiService.clearToken();
       dispatch({ type: 'SIGNOUT' });
-      router.push('/signin');
+      window.location.href = '/auth/signin';
     }
   };
 

@@ -2,7 +2,7 @@
 
 // API service for backend communication
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface ApiResponse<T> {
   data?: T;
@@ -15,6 +15,9 @@ export interface Todo {
   title: string;
   description?: string;
   completed: boolean;
+  priority: 'low' | 'medium' | 'high';
+  tags: string; // comma-separated string
+  due_date?: string;
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -59,7 +62,7 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_BASE_URL}/api/v1${endpoint}`;
 
     const headers = {
       'Content-Type': 'application/json',
@@ -78,6 +81,13 @@ class ApiService {
         headers,
       });
 
+      // For 204 No Content responses, return early with no data
+      if (response.status === 204) {
+        return {
+          status: response.status,
+        } as ApiResponse<T>;
+      }
+
       // Check if response has content before trying to parse JSON
       const contentType = response.headers.get('content-type');
       let data = null;
@@ -85,12 +95,6 @@ class ApiService {
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
-        // For non-JSON responses (like 204 No Content), just return status
-        if(response.status === 204) {
-          return {
-            status: response.status,
-          } as ApiResponse<T>;
-        }
         // For other non-JSON responses, try to get text
         data = await response.text();
       }
@@ -140,21 +144,77 @@ class ApiService {
   }
 
   // Todo methods
-  async getTodos(): Promise<ApiResponse<GetTodosResponse>> {
-    return this.request('/todos');
+  async getTodos(params?: {
+    search?: string;
+    priority?: string;
+    tags?: string;
+    due_date_from?: string;
+    due_date_to?: string;
+    completed?: boolean;
+    sort?: string;
+    order?: 'asc' | 'desc';
+  }): Promise<ApiResponse<{todos: Todo[]; total: number}>> {
+    let endpoint = '/todos';
+    if (params) {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, value.toString());
+        }
+      });
+      const queryString = queryParams.toString();
+      if (queryString) {
+        endpoint += `?${queryString}`;
+      }
+    }
+    return this.request(endpoint);
   }
 
-  async createTodo(title: string, description?: string): Promise<ApiResponse<Todo>> {
+  async createTodo(
+    title: string,
+    description?: string,
+    priority: string = 'medium',
+    tags: string = '', // comma-separated string
+    due_date?: string
+  ): Promise<ApiResponse<Todo>> {
+    // Process tags to ensure they are properly formatted (comma-separated)
+    let processedTags = '';
+    if (tags) {
+      const tagList = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      processedTags = tagList.join(',');
+    }
+
     return this.request('/todos', {
       method: 'POST',
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description, priority, tags: processedTags, due_date }),
     });
   }
 
-  async updateTodo(id: string, title?: string, description?: string, completed?: boolean): Promise<ApiResponse<Todo>> {
+  async updateTodo(
+    id: string,
+    updates: {
+      title?: string;
+      description?: string;
+      completed?: boolean;
+      priority?: string;
+      tags?: string;
+      due_date?: string;
+    }
+  ): Promise<ApiResponse<Todo>> {
+    // Process tags if they are being updated to ensure they are properly formatted (comma-separated)
+    const processedUpdates = { ...updates };
+    if (updates.tags !== undefined) {
+      if (updates.tags) {
+        const tagList = updates.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        processedUpdates.tags = tagList.join(',');
+      } else {
+        processedUpdates.tags = '';
+      }
+    }
+
     return this.request(`/todos/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ title, description, completed }),
+      body: JSON.stringify(processedUpdates),
     });
   }
 

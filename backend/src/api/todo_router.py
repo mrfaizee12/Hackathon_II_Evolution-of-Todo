@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 from ..models.todo import Todo, TodoCreate, TodoRead, TodoUpdate, TodoPatchStatus
 from ..models.user import User
@@ -39,13 +40,42 @@ def create_new_todo(
 @todo_router.get("/todos", response_model=List[TodoRead])
 def read_todos(
     current_user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
+    search: Optional[str] = None,
+    priority: Optional[str] = None,
+    tags: Optional[str] = None,
+    due_date_from: Optional[str] = None,
+    due_date_to: Optional[str] = None,
+    completed: Optional[bool] = None,
+    sort: Optional[str] = None,
+    order: Optional[str] = None
 ):
     """
-    Get all todos for the authenticated user.
+    Get all todos for the authenticated user with optional search, filtering, and sorting.
     """
     try:
-        todos = get_todos_by_user(session, str(current_user.id))
+        # Convert date strings to datetime objects if provided
+        due_date_from_dt = None
+        due_date_to_dt = None
+        if due_date_from:
+            from datetime import datetime
+            due_date_from_dt = datetime.fromisoformat(due_date_from.replace('Z', '+00:00'))
+        if due_date_to:
+            from datetime import datetime
+            due_date_to_dt = datetime.fromisoformat(due_date_to.replace('Z', '+00:00'))
+
+        todos = get_todos_by_user(
+            session,
+            str(current_user.id),
+            search=search,
+            completed=completed,
+            priority=priority,
+            tags=tags,
+            due_date_from=due_date_from_dt,
+            due_date_to=due_date_to_dt,
+            sort=sort,
+            order=order
+        )
         return todos
     except Exception as e:
         raise HTTPException(
