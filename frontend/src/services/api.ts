@@ -100,9 +100,34 @@ class ApiService {
       }
 
       if (!response.ok) {
-        const errorMessage = (typeof data === 'object' && data && 'detail' in data)
-          ? (data as any).detail
-          : `HTTP error! status: ${response.status}`;
+        let errorMessage = `HTTP error! status: ${response.status}`;
+
+        // Handle the case where data is an object (like validation errors)
+        if (typeof data === 'object' && data) {
+          if ('detail' in data && typeof (data as any).detail !== 'undefined') {
+            // Handle simple detail string
+            if (typeof (data as any).detail === 'string') {
+              errorMessage = (data as any).detail;
+            } else if (Array.isArray((data as any).detail)) {
+              // Handle FastAPI validation error array
+              const validationErrors = (data as any).detail;
+              const errorMessages = validationErrors.map((error: any) => {
+                if (typeof error === 'object' && error && 'msg' in error) {
+                  return error.msg;
+                }
+                return JSON.stringify(error);
+              });
+              errorMessage = errorMessages.join('; ');
+            } else {
+              // For other object types, convert to string
+              errorMessage = JSON.stringify((data as any).detail);
+            }
+          } else {
+            // If no detail property, try to convert the whole object to a string
+            errorMessage = JSON.stringify(data);
+          }
+        }
+
         return {
           error: errorMessage,
           status: response.status,
@@ -187,9 +212,32 @@ class ApiService {
       processedTags = tagList.join(',');
     }
 
+    // Prepare the request body, omitting due_date if it's empty or invalid
+    const requestBody: any = { title, description, priority, tags: processedTags };
+    if (due_date && due_date.trim() !== '') {
+      // Convert to ISO-8601 format if it's not already in that format
+      let formattedDueDate = due_date;
+      try {
+        // Check if the date is already in ISO format, if not convert it
+        if (!due_date.includes('T')) {
+          // If it's just a date (YYYY-MM-DD), convert to ISO format with time
+          const dateObj = new Date(due_date);
+          formattedDueDate = dateObj.toISOString();
+        } else {
+          // If it already has time, make sure it's in proper ISO format
+          const dateObj = new Date(due_date);
+          formattedDueDate = dateObj.toISOString();
+        }
+      } catch (error) {
+        // If parsing fails, try to send as is (let backend handle validation)
+        formattedDueDate = due_date;
+      }
+      requestBody.due_date = formattedDueDate;
+    }
+
     return this.request('/todos', {
       method: 'POST',
-      body: JSON.stringify({ title, description, priority, tags: processedTags, due_date }),
+      body: JSON.stringify(requestBody),
     });
   }
 
@@ -205,13 +253,40 @@ class ApiService {
     }
   ): Promise<ApiResponse<Todo>> {
     // Process tags if they are being updated to ensure they are properly formatted (comma-separated)
-    const processedUpdates = { ...updates };
+    let processedUpdates = { ...updates };
     if (updates.tags !== undefined) {
       if (updates.tags) {
         const tagList = updates.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
         processedUpdates.tags = tagList.join(',');
       } else {
         processedUpdates.tags = '';
+      }
+    }
+
+    // Handle due_date formatting for updates as well
+    if (processedUpdates.due_date !== undefined) {
+      if (processedUpdates.due_date && processedUpdates.due_date.trim() !== '') {
+        // Convert to ISO-8601 format if it's not already in that format
+        let formattedDueDate = processedUpdates.due_date;
+        try {
+          // Check if the date is already in ISO format, if not convert it
+          if (!processedUpdates.due_date.includes('T')) {
+            // If it's just a date (YYYY-MM-DD), convert to ISO format with time
+            const dateObj = new Date(processedUpdates.due_date);
+            formattedDueDate = dateObj.toISOString();
+          } else {
+            // If it already has time, make sure it's in proper ISO format
+            const dateObj = new Date(processedUpdates.due_date);
+            formattedDueDate = dateObj.toISOString();
+          }
+        } catch (error) {
+          // If parsing fails, try to send as is (let backend handle validation)
+          formattedDueDate = processedUpdates.due_date;
+        }
+        processedUpdates.due_date = formattedDueDate;
+      } else {
+        // If due_date is empty, remove it from the update object
+        delete processedUpdates.due_date;
       }
     }
 
