@@ -90,7 +90,7 @@ class ApiService {
 
       // Check if response has content before trying to parse JSON
       const contentType = response.headers.get('content-type');
-      let data = null;
+      let data: string | object | null = null;
 
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
@@ -100,14 +100,17 @@ class ApiService {
       }
 
       if (!response.ok) {
+        const errorMessage = (typeof data === 'object' && data && 'detail' in data)
+          ? (data as any).detail
+          : `HTTP error! status: ${response.status}`;
         return {
-          error: (data && data.detail) ? data.detail : `HTTP error! status: ${response.status}`,
+          error: errorMessage,
           status: response.status,
         };
       }
 
       return {
-        data,
+        data: data as T,
         status: response.status,
       };
     } catch (error: any) {

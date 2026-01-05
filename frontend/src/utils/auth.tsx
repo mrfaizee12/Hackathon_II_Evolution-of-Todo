@@ -87,7 +87,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         apiService.setToken(response.data.token);
       }
 
-      dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
+      if (response.data) {
+        dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
+      }
       window.location.href = '/dashboard';
     } catch (error: any) {
       dispatch({ type: 'AUTH_FAILURE' });
@@ -115,7 +117,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         apiService.setToken(signinResponse.data.token);
       }
 
-      dispatch({ type: 'AUTH_SUCCESS', payload: signinResponse.data.user });
+      if (signinResponse.data) {
+        dispatch({ type: 'AUTH_SUCCESS', payload: signinResponse.data.user });
+      }
       window.location.href = '/dashboard';
     } catch (error: any) {
       dispatch({ type: 'AUTH_FAILURE' });
