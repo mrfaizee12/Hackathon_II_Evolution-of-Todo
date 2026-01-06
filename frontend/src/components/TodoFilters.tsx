@@ -13,9 +13,11 @@ interface TodoFiltersProps {
     sort: string;
     order: string;
   }) => void;
+  todosCount?: number; // Optional prop to show different text based on todo count
+  headerButton?: React.ReactNode; // Optional button to be placed in the header row
 }
 
-const TodoFilters: React.FC<TodoFiltersProps> = ({ onFilterChange }) => {
+const TodoFilters: React.FC<TodoFiltersProps> = ({ onFilterChange, todosCount = 0, headerButton }) => {
   const [search, setSearch] = useState('');
   const [priority, setPriority] = useState('');
   const [tags, setTags] = useState('');
@@ -61,7 +63,10 @@ const TodoFilters: React.FC<TodoFiltersProps> = ({ onFilterChange }) => {
 
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-6">
-      <h2 className="text-lg font-medium text-gray-900 mb-4">Filters</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-medium text-gray-900">Filters</h2>
+        {headerButton && <div>{headerButton}</div>}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>

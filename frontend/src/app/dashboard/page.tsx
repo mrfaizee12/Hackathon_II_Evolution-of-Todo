@@ -188,7 +188,7 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -222,16 +222,53 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Search Bar */}
-        <SearchBar onSearch={handleSearch} />
+        {/* Search Bar and Filters Container */}
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="max-w-md">
+            {/* Search Bar */}
+            <SearchBar onSearch={handleSearch} />
+          </div>
 
-        {/* Filters */}
-        <TodoFilters onFilterChange={handleFilterChange} />
+          {/* Filters with Add Todo Button */}
+          <div className="flex-1">
+            <TodoFilters
+              onFilterChange={handleFilterChange}
+              todosCount={todos.length}
+              headerButton={
+                todos.length === 0 ? (
+                  <button
+                    onClick={() => {
+                      const element = document.getElementById('add-todo-form');
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-300 font-medium whitespace-nowrap"
+                  >
+                    Create your first todo
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const element = document.getElementById('add-todo-form');
+                      if (element) {
+                        element.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-300 font-medium whitespace-nowrap"
+                  >
+                    Add new todo
+                  </button>
+                )
+              }
+            />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left column - Add Todo or Edit Todo */}
           <div className="lg:col-span-1">
-            <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+            <div id="add-todo-form" className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center mb-4">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 w-8 h-8 rounded-lg flex items-center justify-center mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,6 +287,7 @@ const DashboardPage: React.FC = () => {
                 todo={editingTodo || undefined}
                 onSubmit={editingTodo ? (todoData) => handleUpdateTodo(editingTodo.id, todoData) : handleAddTodo}
                 onCancel={editingTodo ? handleCancelEdit : undefined}
+                onAddSuccess={() => {}}
               />
             </div>
           </div>
@@ -297,6 +335,7 @@ const DashboardPage: React.FC = () => {
                       onToggle={() => handleToggleTodo(todo.id)}
                       onEdit={handleEditTodo}
                       onDelete={handleDeleteTodo}
+                      onDeleteSuccess={() => {}}
                     />
                   ))}
                 </div>

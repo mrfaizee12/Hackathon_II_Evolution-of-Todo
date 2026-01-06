@@ -16,14 +16,31 @@
   }
 }
 
+/* Dark gradient background for dashboard */
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
+      135deg,
+      #0f0f0f 0%,
+      #1a1a2e 25%,
+      #16213e 50%,
+      #0f0f0f 100%
     )
     rgb(var(--background-start-rgb));
+}
+
+/* Ensure cards maintain light/white background for contrast */
+.card, .todo-card, .add-todo-card {
+  background-color: white;
+  color: black;
+}
+
+/* Dark mode card styling */
+@media (prefers-color-scheme: dark) {
+  .card, .todo-card, .add-todo-card {
+    background-color: white;
+    color: black;
+  }
 }
 
 
