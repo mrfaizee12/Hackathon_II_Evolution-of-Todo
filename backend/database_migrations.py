@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get database URL from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_WLsUO29puhgj@ep-odd-boat-a4qnunlz-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 def run_migrations():
     """Add new columns to the todo table."""
