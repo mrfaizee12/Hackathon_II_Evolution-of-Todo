@@ -1,0 +1,443 @@
+# CLI Operation Contracts: Phase I Intermediate
+
+**Feature**: 001-phase-i-intermediate
+**Date**: 2026-01-01
+**Purpose**: Define CLI operation contracts for search, filter, and sort features
+
+## Operation: Update Task Priority
+
+**Menu Option**: 7
+
+**Inputs**:
+- task_id: int (required) - ID of task to update
+- priority: Priority enum (required) - New priority value (HIGH/MEDIUM/LOW)
+
+**Preconditions**:
+- Task with task_id must exist
+- Priority value must be valid (HIGH, MEDIUM, or LOW)
+
+**Outputs**:
+- Success: tuple[bool, str] - (True, "Task priority updated successfully!")
+- Failure: tuple[bool, str] - (False, "Task not found (ID: {task_id})")
+
+**Behavior**:
+- Shows current priority
+- Prompts user for new priority
+- Validates priority input
+- Updates task.priority field
+- Returns success/failure message
+
+**Error Cases**:
+- Task not found: Return False with message
+- Invalid priority: Show error, reprompt
+
+**FR Coverage**:
+- FR-001: Assign priority to task
+- FR-003: Modify priority on existing task
+
+---
+
+## Operation: Manage Task Tags
+
+**Menu Option**: 8
+
+**Inputs**:
+- task_id: int (required) - ID of task to manage tags
+- action: enum (required) - "add" or "remove"
+- tags: list[str] (required for add) - Comma-separated tags to add
+- tag: str (required for remove) - Single tag to remove
+
+**Preconditions**:
+- Task with task_id must exist
+- For add: tags must be valid (≤50 chars each, ≤10 total)
+- For remove: tag must exist on task
+
+**Outputs**:
+- Success: tuple[bool, str] - (True, "Tags added successfully!" or "Tag removed successfully!")
+- Failure: tuple[bool, str] - (False, error message)
+
+**Behavior**:
+- Shows current tags
+- Prompts user to add or remove tags
+- Validates tag input (length, count)
+- Updates task.tags list
+- Returns success/failure message
+
+**Error Cases**:
+- Task not found: Return False with message
+- Tag too long (>50 chars): Return False with error
+- Too many tags (>10): Return False with error
+- Tag not found (for remove): Return False with error
+
+**FR Coverage**:
+- FR-006: Attach zero or more tags to task
+- FR-007: Add multiple tags in single interaction
+- FR-008: Add tags to existing task
+- FR-009: Remove tags from existing task
+- FR-010: Display all tags in task detail
+
+---
+
+## Operation: Search Tasks
+
+**Menu Option**: 9
+
+**Inputs**:
+- keyword: str (optional, default="") - Search keyword
+
+**Preconditions**:
+- None (empty keyword returns all tasks)
+
+**Outputs**:
+- Results: list[Task] - Tasks matching keyword (all tasks if empty keyword)
+- Display: Formatted task list with priority and tags
+
+**Behavior**:
+- Prompts user for keyword (optional)
+- Searches task.title and task.description
+- Case-insensitive matching
+- Returns tasks where keyword in title OR description
+- Empty keyword returns all tasks (FR-019)
+- Displays "No tasks found matching '{keyword}'" if empty results
+
+**Error Cases**:
+- No search results: Display empty message, return to menu
+
+**FR Coverage**:
+- FR-013: Search tasks by keyword
+- FR-014: Search title and description fields
+- FR-015: Return tasks matching title OR description
+- FR-016: Case-insensitive search
+- FR-017: Empty results message
+- FR-018: Clear search and return to all tasks
+- FR-019: Empty keyword shows all tasks
+
+---
+
+## Operation: Filter Tasks
+
+**Menu Option**: 10
+
+**Inputs**:
+- status_filter: FilterStatus enum (optional, default=ALL)
+- priority_filter: Priority enum (optional, default=None)
+- tag_filter: str (optional, default=None)
+
+**Preconditions**:
+- If tag_filter provided, tag must exist on at least one task
+
+**Outputs**:
+- Results: list[Task] - Tasks matching all active filters (AND logic)
+- Display: Formatted task list with priority and tags
+
+**Behavior**:
+- Prompts user for filter criteria (status, priority, tag)
+- Shows available tags (unique tags from all tasks) for tag filter
+- Applies filters using AND logic (all conditions must be met)
+- Returns filtered task list
+- Displays "No tasks match current filters." if empty results
+- Shows current active filters in display header
+
+**Error Cases**:
+- No tasks match filters: Display empty message, return to menu
+- Invalid filter input: Show error, reprompt
+
+**FR Coverage**:
+- FR-020: Filter by completion status (completed, incomplete, all)
+- FR-021: Filter by priority (High, Medium, Low, all)
+- FR-022: Filter by tag (specific tag, all tags)
+- FR-023: Combine multiple filters (status + priority, status + tag, all three)
+- FR-024: Apply filters using AND logic
+- FR-025: Empty results message
+- FR-026: Remove filters and return to all tasks
+- FR-027: Clearly indicate active filters
+- FR-028: Show all available tags in filter options
+
+---
+
+## Operation: Sort Tasks
+
+**Menu Option**: 11
+
+**Inputs**:
+- sort_by: SortBy enum (required) - Sort criteria
+
+**Preconditions**:
+- Tasks list must not be empty
+
+**Outputs**:
+- Results: list[Task] - Tasks sorted by selected criteria
+- Display: Formatted task list with priority and tags
+
+**Behavior**:
+- Shows sort options as menu (Title A-Z, Title Z-A, Priority High-Low, Priority Low-High)
+- Prompts user for sort choice
+- Sorts task list (stable sort, preserves order for equal keys)
+- Case-insensitive title sorting
+- Applies sort to current filtered result if filters active (FR-034)
+- Returns sorted task list
+
+**Error Cases**:
+- No tasks: Display "No tasks to sort.", return to menu
+- Invalid sort input: Show error, reprompt
+
+**FR Coverage**:
+- FR-029: Sort by priority ascending (High to Low)
+- FR-030: Sort by priority descending (Low to High)
+- FR-031: Sort by title ascending (A-Z)
+- FR-032: Sort by title descending (Z-A)
+- FR-033: Case-insensitive title sort
+- FR-034: Apply sort to filtered result set
+- FR-035: Remove sorting and return to default order
+- FR-036: Stable sort for identical values
+
+---
+
+## Operation: Add Task with Priority and Tags
+
+**Menu Option**: 2 (extended)
+
+**Inputs**:
+- title: str (required) - Task title
+- description: str (optional, default="") - Task description
+- priority: Priority enum (optional, default=MEDIUM) - Task priority
+- tags: list[str] (optional, default=[]) - Task tags
+
+**Preconditions**:
+- Title must be non-empty
+- Tags must be valid (≤50 chars each, ≤10 total)
+
+**Outputs**:
+- Success: tuple[bool, str, int] - (True, message, task_id)
+- Failure: tuple[bool, str, int] - (False, error message, -1)
+
+**Behavior**:
+- Prompts user for title (required)
+- Prompts user for description (optional)
+- Prompts user for priority (optional, defaults to Medium)
+- Prompts user for tags (optional, comma-separated)
+- Validates all inputs
+- Creates Task object with all fields
+- Adds to TaskService storage
+- Returns success/failure with task_id
+
+**Error Cases**:
+- Empty title: Return False with error
+- Invalid tags: Return False with error (too long, too many)
+- Task creation failure: Return False with ValueError
+
+**FR Coverage**:
+- FR-001: Assign priority to task
+- FR-002: Default priority to Medium
+- FR-005: Allow creating tasks without specifying priority
+- FR-006: Attach zero or more tags to task
+- FR-007: Add multiple tags in single interaction
+- FR-011: Allow creating tasks with zero tags
+
+---
+
+## Operation: Update Task (Extended)
+
+**Menu Option**: 3 (extended)
+
+**Inputs**:
+- task_id: int (required) - ID of task to update
+- title: str (optional) - New title (None to keep current)
+- description: str (optional) - New description (None to keep current)
+- priority: Priority enum (optional) - New priority (None to keep current)
+- tags: list[str] (optional) - New tags (None to keep current)
+
+**Preconditions**:
+- Task with task_id must exist
+- If title provided, must be non-empty
+- If tags provided, must be valid
+
+**Outputs**:
+- Success: tuple[bool, str] - (True, "Task updated successfully!")
+- Failure: tuple[bool, str] - (False, error message)
+
+**Behavior**:
+- Prompts user for task_id
+- Shows current task details (title, description, priority, tags)
+- Prompts user for each field (optional, press Enter to keep current)
+- Validates any new values provided
+- Updates specified fields only
+- Returns success/failure message
+
+**Error Cases**:
+- Task not found: Return False with message
+- Empty new title: Return False with error
+- Invalid new tags: Return False with error
+
+**FR Coverage**:
+- FR-003: Modify priority on existing task
+- FR-008: Add tags to existing task
+- FR-009: Remove tags from existing task
+
+---
+
+## Input Validation Contracts
+
+### Priority Validation
+
+**Function**: `validate_priority(value: str) -> Priority`
+
+**Inputs**:
+- value: str - User-provided priority string
+
+**Outputs**:
+- Success: Priority enum (HIGH, MEDIUM, or LOW)
+- Failure: ValueError with message "Invalid priority. Please choose High, Medium, or Low."
+
+**Behavior**:
+- Case-insensitive matching ("high" → Priority.HIGH)
+- Returns first matching Priority enum value
+- Raises ValueError if no match
+
+---
+
+### Tag Validation
+
+**Function**: `validate_tags(tags: list[str]) -> tuple[bool, str]`
+
+**Inputs**:
+- tags: list[str] - List of tags to validate
+
+**Outputs**:
+- Success: tuple[True, ""]
+- Failure: tuple[False, error_message]
+
+**Behavior**:
+- Validates each tag length (max 50 characters)
+- Validates total tag count (max 10)
+- Returns (True, "") if all valid
+- Returns (False, message) with first error found
+
+**Error Messages**:
+- Tag too long: "Tag 'exampletag...' exceeds 50 character limit."
+- Too many tags: "Cannot add more than 10 tags to a task."
+
+---
+
+### Search Keyword Validation
+
+**Function**: `validate_search_keyword(keyword: str) -> str`
+
+**Inputs**:
+- keyword: str - User-provided search keyword
+
+**Outputs**:
+- Validated: str - Stripped keyword (may be empty)
+
+**Behavior**:
+- Strips whitespace
+- Returns empty string unchanged (FR-019: empty keyword shows all tasks)
+- No validation failures (any text is valid for search)
+
+---
+
+### Filter Validation
+
+**Function**: `validate_filter_status(value: str) -> FilterStatus`
+
+**Inputs**:
+- value: str - User-provided status filter string
+
+**Outputs**:
+- Success: FilterStatus enum (ALL, COMPLETE, INCOMPLETE)
+- Failure: ValueError with message
+
+**Behavior**:
+- Case-insensitive matching ("complete" → FilterStatus.COMPLETE)
+- Returns first matching FilterStatus enum value
+
+**Function**: `validate_filter_tag(tag: str, available_tags: set[str]) -> str`
+
+**Inputs**:
+- tag: str - User-provided tag filter
+- available_tags: set[str] - All tags currently in use
+
+**Outputs**:
+- Valid: str - Validated tag
+- Invalid: ValueError with message
+
+**Behavior**:
+- Checks if tag exists in available_tags
+- Returns tag if valid
+- Raises ValueError if invalid
+
+---
+
+### Sort Validation
+
+**Function**: `validate_sort_choice(value: str) -> SortBy`
+
+**Inputs**:
+- value: str - User-provided sort choice string
+
+**Outputs**:
+- Success: SortBy enum (TITLE_ASC, TITLE_DESC, PRIORITY_HIGH_LOW, PRIORITY_LOW_HIGH)
+- Failure: ValueError with message
+
+**Behavior**:
+- Case-insensitive matching
+- Returns first matching SortBy enum value
+- Raises ValueError if no match
+
+---
+
+## Output Formatting Contracts
+
+### Format Task List
+
+**Function**: `format_task_list(tasks: list[Task]) -> None`
+
+**Inputs**:
+- tasks: list[Task] - Tasks to display
+
+**Outputs**:
+- Display: Console output (printed to stdout)
+
+**Behavior**:
+- If empty list: Display "No tasks found."
+- If non-empty:
+  - Display header ("Tasks")
+  - For each task:
+    - Display ID, title, priority [in brackets]
+    - Display description if non-empty
+    - Display tags if present ("Tags: tag1, tag2")
+    - Display status
+    - Display separator
+  - Show active filters (if any) in header
+  - Show sort order (if sorted) in header
+
+**FR Coverage**:
+- FR-004: Display task priority in list and detail views
+- FR-010: Display all tags in task detail view
+
+---
+
+## Summary
+
+**CLI Operations Defined**:
+1. ✅ Update Task Priority (menu option 7)
+2. ✅ Manage Task Tags (menu option 8)
+3. ✅ Search Tasks (menu option 9)
+4. ✅ Filter Tasks (menu option 10)
+5. ✅ Sort Tasks (menu option 11)
+6. ✅ Add Task with Priority and Tags (menu option 2 extended)
+7. ✅ Update Task Extended (menu option 3 extended)
+
+**Input Validation Contracts Defined**:
+1. ✅ Priority validation
+2. ✅ Tag validation
+3. ✅ Search keyword validation
+4. ✅ Filter validation (status, tag)
+5. ✅ Sort validation
+
+**Output Formatting Contracts Defined**:
+1. ✅ Format task list with priority and tags
+
+**FR Coverage**: All FR-001 to FR-039 covered in operation contracts
+
+**Ready for**: Implementation with explicit input/output contracts

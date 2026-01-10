@@ -1,28 +1,42 @@
 <!--
 Sync Impact Report
 ==================
-Version: 0.0.0 → 1.0.0
-Change Type: MAJOR - Initial ratification of Evolution of Todo global constitution
+Version: 1.2.0 → 1.3.0
+Change Type: MINOR - Phase II Intermediate extension with authorized features and restrictions
 
-Sections Added:
-- Core Principles (5 principles: Spec-Driven Development, Agent Behavior, Phase Governance, Technology Stack, Quality Principles)
-- Technology Constraints
-- Development Workflow
-- Governance
+Changes Made:
+- Updated Phase Isolation Policy:
+  - Phase I (In-Memory Console Application) is finalized and immutable
+  - Phase II Basic (Full-Stack Web Application with basic todo features) is completed and must not be broken
+  - All new development is restricted to Phase II Intermediate as incremental, non-breaking extensions
+- Added Phase II Intermediate Extension with authorized features:
+  - Todo priorities (high / medium / low)
+  - Todo tags or categories
+  - Search todos by keyword
+  - Filter todos by status, priority, and due date
+  - Sort todos by due date, priority, or alphabetical order
+  - UI enhancements: Public landing page, Hero section, Footer, Improved authenticated dashboard UI
+- Mandated Technology Requirements for Phase II:
+  - Backend: FastAPI (Python REST API)
+  - Database: Neon Serverless PostgreSQL
+  - ORM / Data Layer: SQLModel
+  - Frontend: Next.js (React, TypeScript)
+  - Authentication: Better Auth (signup/signin only)
+  - Dependency management: UV
+- Added Global Restrictions: No AI or agent frameworks, No background jobs or workers, No real-time features, No future-phase infrastructure or technologies
+- Emphasized Enforcement: Phase II Intermediate work must extend existing Phase II Basic behavior without refactoring or breaking changes
 
 Templates Status:
-- ✅ .specify/templates/plan-template.md - Reviewed, aligns with constitution
-- ✅ .specify/templates/spec-template.md - Reviewed, aligns with constitution
-- ✅ .specify/templates/tasks-template.md - Reviewed, aligns with constitution
+- ✅ .specify/templates/plan-template.md - Aligned with updated architecture options
+- ✅ .specify/templates/spec-template.md - Aligned with priority/search requirements
+- ✅ .specify/templates/tasks-template.md - Aligned with setup/foundation requirements for Phase II
+- ✅ .specify/templates/phr-template.prompt.md - Aligned with updated constitution
 
 Follow-up Actions:
 - None - all placeholders filled, all templates aligned
 
 Notes:
-- This is the initial ratification of the constitution for the Evolution of Todo project
-- Covers all phases (Phase I through Phase V)
-- Establishes Spec-Driven Development as mandatory
-- Defines clear agent behavior rules and phase governance
+- This amendment enables Phase II Intermediate development while maintaining strict phase isolation and non-breaking extension policy.
 -->
 
 # Evolution of Todo Project Constitution
@@ -39,7 +53,7 @@ Notes:
 4. Every feature requires a task list in `specs/<feature>/tasks.md` before implementation
 5. Implementation begins ONLY after user approval of specifications and tasks
 
-**Rationale**: Spec-Driven Development ensures all stakeholders understand requirements before code is written, prevents scope creep, enables accurate effort estimation, and creates traceable documentation. This is particularly critical for the Evolution of Todo project, which spans five distinct phases with increasing complexity.
+**Rationale**: Spec-Driven Development ensures all stakeholders understand requirements before code is written, prevents scope creep, enables accurate effort estimation, and creates traceable documentation. This is particularly critical for the Evolution of Todo project, which spans multiple phases with increasing complexity.
 
 **Violations**: Code written without approved specs is considered non-compliant and MUST be reverted.
 
@@ -65,46 +79,83 @@ Notes:
 
 **Each phase is strictly scoped; future-phase features MUST NOT leak into earlier phases.**
 
-The Evolution of Todo project consists of five phases:
+The Evolution of Todo project consists of multiple phases with strict isolation:
 
-- **Phase I**: Basic Todo CRUD with local persistence
-- **Phase II**: Multi-user support with authentication and cloud persistence
-- **Phase III**: Real-time collaboration, notifications, and advanced search
-- **Phase IV**: Agent orchestration, MCP integration, and workflow automation
-- **Phase V**: Distributed architecture with event sourcing and CQRS
+**Phase Isolation Policy**:
+- Phase I (In-Memory Console Application) is finalized and immutable.
+- Phase II Basic (Full-Stack Web Application with basic todo features) is completed and must not be broken.
+- All new development is restricted to Phase II Intermediate as incremental, non-breaking extensions.
+
+**Phase II — Intermediate Extension (Authorized)**:
+Phase II is permitted to evolve beyond basic functionality to include intermediate-level organization and usability features.
+
+**Allowed functionality additions in Phase II Intermediate**:
+- Todo priorities (high / medium / low)
+- Todo tags or categories
+- Search todos by keyword
+- Filter todos by status, priority, and due date
+- Sort todos by due date, priority, or alphabetical order
+- UI enhancements limited strictly to:
+  - Public landing page
+  - Hero section
+  - Footer
+  - Improved authenticated dashboard UI
+
+**Mandatory Technology Requirements (Phase II)**:
+- Backend: FastAPI (Python REST API)
+- Database: Neon Serverless PostgreSQL
+- ORM / Data Layer: SQLModel
+- Frontend: Next.js (React, TypeScript)
+- Authentication: Better Auth (signup/signin only)
+- Dependency management: UV
+
+**Global Restrictions**:
+- No AI or agent frameworks
+- No background jobs or workers
+- No real-time features
+- No future-phase infrastructure or technologies
+
+**Enforcement**:
+- Phase II Intermediate work must extend existing Phase II Basic behavior without refactoring or breaking changes.
+- This constitution amendment is authoritative and must be enforced across all specifications, plans, tasks, and implementations.
 
 **Phase Isolation Rules**:
 1. Each phase has its own specification in `specs/phase-<N>-<name>/`
 2. Implementation MUST NOT reference or depend on future-phase features
 3. Architecture MAY evolve only through updated specifications and plans
 4. Phase boundaries are enforcement points; no feature may span phases without explicit specification
+5. **No AI or agent frameworks** are allowed until authorized phases.
+6. **No breaking changes** are permitted to completed phases.
 
-**Rationale**: Strict phase isolation prevents premature optimization, maintains focus on current deliverables, enables incremental validation, and ensures each phase delivers standalone value.
+**Rationale**: Strict phase isolation prevents premature optimization, maintains focus on current deliverables, enables incremental validation, and ensures each phase delivers standalone value while maintaining backward compatibility.
 
 ### IV. Technology Stack
 
 **The following technology constraints are mandatory across all phases:**
 
-**Backend**:
+**Backend** (Phase II+):
 - Language: Python 3.11+
-- Framework: FastAPI (async web framework)
+- Framework: FastAPI (async web framework) for REST API
 - ORM: SQLModel (Pydantic + SQLAlchemy)
-- Database: Neon DB (PostgreSQL-compatible, serverless)
-- Agent Framework: OpenAI Agents SDK (Phase IV+)
-- MCP: Model Context Protocol servers (Phase IV+)
+- Database: Neon Serverless PostgreSQL
+- Dependency Management: UV
 
 **Frontend** (Phase II+):
-- Framework: Next.js (React with SSR/SSG)
+- Framework: Next.js 14+ (App Router, React, TypeScript)
 - Language: TypeScript
-- State Management: To be specified per phase requirements
+- UI: Tailwind CSS (with gradient themes)
 
-**Infrastructure** (Phase III+):
+**Authentication** (Phase II+):
+- Solution: Better Auth (signup/signin only)
+
+**Architecture** (Phase II+):
+- Full-stack web application (Separated Backend/Frontend folders if applicable)
+
+**Infrastructure** (Authorized Phases):
 - Containerization: Docker
 - Orchestration: Kubernetes
-- Event Streaming: Apache Kafka (Phase V)
-- Service Mesh: Dapr (Phase V)
 
-**Rationale**: Standardizing the technology stack ensures consistency across phases, reduces cognitive load, enables code reuse, and simplifies integration. These technologies are chosen for their cloud-native capabilities, strong typing, async support, and agent integration features.
+**Rationale**: Standardizing the technology stack ensures consistency across phases, reduces cognitive load, enables code reuse, and simplifies integration. These technologies are chosen for their cloud-native capabilities, strong typing, async support, and proven reliability.
 
 **Exceptions**: Technology changes MUST be proposed through constitution amendments with clear justification.
 
@@ -117,19 +168,18 @@ The Evolution of Todo project consists of five phases:
 - Business rules MUST NOT depend on UI, database, or external services
 
 **Stateless Services** (where applicable):
-- Services MUST be stateless to enable horizontal scaling (Phase III+)
+- Services MUST be stateless to enable horizontal scaling
 - All state MUST be externalized to databases, caches, or message queues
-- Session state MUST be stored in distributed caches or databases (Phase II+)
+- Session state MUST be handled by centralized Auth (Better Auth) and DB.
 
 **Cloud-Native Readiness**:
 - Applications MUST support 12-factor app principles
-- Configuration MUST be environment-based (via environment variables or config services)
+- Configuration MUST be environment-based (via .env or secret management)
 - Services MUST expose health checks and readiness probes
-- Logs MUST be structured (JSON) and written to stdout (Phase III+)
-- Metrics MUST be exposed in Prometheus format (Phase III+)
+- Logs MUST be structured (JSON) and written to stdout
+- Metrics MUST be exposed in Prometheus format
 
 **Testing Discipline**:
-- Test-Driven Development (TDD) is RECOMMENDED but not mandatory
 - All features MUST have integration tests covering primary user journeys
 - All APIs MUST have contract tests
 - Critical business logic MUST have unit tests
@@ -138,16 +188,15 @@ The Evolution of Todo project consists of five phases:
 **Security**:
 - MUST follow OWASP Top 10 guidelines
 - MUST NOT hardcode secrets, credentials, or tokens
-- MUST use environment variables or secret management services
+- MUST use environment variables for all secrets
 - MUST implement proper authentication and authorization (Phase II+)
 - MUST sanitize all user inputs
 - MUST implement rate limiting on public APIs (Phase II+)
 
 **Performance**:
-- API responses MUST complete within 200ms p95 latency (Phase III+ under normal load)
+- API responses MUST complete within 200ms p95 latency under normal load
 - Database queries MUST be optimized and indexed appropriately
-- MUST implement caching strategies for frequently accessed data (Phase III+)
-- MUST monitor and alert on performance degradation
+- MUST implement caching strategies for frequently accessed data
 
 **Rationale**: Quality principles ensure the system remains maintainable, scalable, and reliable as it evolves across phases. These principles prevent technical debt accumulation and enable sustainable long-term development.
 
@@ -160,13 +209,13 @@ The Evolution of Todo project consists of five phases:
 - Strict type checking enabled (mypy for Python, strict mode for TypeScript)
 
 **Dependency Management**:
-- Backend: Poetry or pip-tools for Python dependency management
-- Frontend: npm or pnpm for JavaScript dependency management
+- Backend: UV (Python package manager)
+- Frontend: npm or pnpm
 - MUST pin exact versions in production
 - MUST document all direct dependencies with purpose
 
 **Database Requirements**:
-- Primary database: Neon DB (PostgreSQL 15+)
+- Primary database: Neon Serverless PostgreSQL
 - MUST use SQLModel for ORM operations
 - MUST version control all schema migrations
 - MUST support rollback for all migrations
@@ -178,10 +227,20 @@ The Evolution of Todo project consists of five phases:
 - MUST version APIs (e.g., `/api/v1/...`)
 
 **Development Environment**:
-- MUST support local development with Docker Compose
+- MUST support local development
 - MUST provide setup documentation in quickstart.md
 - MUST use consistent code formatting (Black for Python, Prettier for TypeScript)
 - MUST enforce linting (ruff for Python, ESLint for TypeScript)
+
+**UI/UX Requirements** (Phase II+):
+- MUST implement modern, professional, hackathon-quality UI
+- MUST use gradient-based colorful theme across the application
+- MUST include subtle animations (hover effects, transitions, loading states)
+- MUST implement smooth page transitions
+- MUST use clean card-based layouts and spacing
+- MUST include a Landing Page with hero section and footer
+- UI enhancements MUST be visual only and MUST NOT change functionality
+- Allowed UI enhancements: Public landing page, Hero section, Footer, Improved authenticated dashboard UI
 
 ## Development Workflow
 
@@ -189,109 +248,50 @@ The Evolution of Todo project consists of five phases:
 
 1. **Constitution Review**: Verify feature aligns with constitutional principles
 2. **Specification** (`/sp.specify`):
-   - Create feature specification with user stories, requirements, and success criteria
-   - Document in `specs/<feature>/spec.md`
-   - Obtain user approval
+   - Create feature specification in `specs/<feature>/spec.md`
+   - Include user stories, requirements (FRs), success criteria (SCs)
 3. **Planning** (`/sp.plan`):
    - Research existing codebase patterns
    - Design architecture and implementation approach
    - Document in `specs/<feature>/plan.md`
-   - Identify Architectural Decision Records (ADRs) if needed
-   - Obtain user approval
 4. **Task Breakdown** (`/sp.tasks`):
    - Break down plan into specific, testable tasks
    - Document in `specs/<feature>/tasks.md`
-   - Organize by user story for independent testing
-   - Obtain user approval
 5. **Implementation** (`/sp.implement`):
    - Execute tasks in dependency order
-   - Create tests before implementation (if TDD requested)
    - Commit after each task or logical group
-   - Reference tasks in commit messages
 6. **Review & Integration**:
-   - Run all tests
-   - Verify acceptance criteria from specification
-   - Create pull request with specification reference
-   - Document with `/sp.adr` if architectural decisions made
+   - Run all tests and verify acceptance criteria
 
 **Prompt History Records (PHR)**:
 - MUST create PHR after every user interaction involving implementation, planning, or specification
 - PHR routing: constitution → `history/prompts/constitution/`, feature → `history/prompts/<feature>/`, general → `history/prompts/general/`
-- MUST capture full user prompt verbatim (no truncation)
-- MUST record stage, title, date, files changed, and representative response
 
 **Architectural Decision Records (ADR)**:
-- MUST suggest ADR when architecturally significant decisions are made during planning or task generation
-- ADR suggestion format: "📋 Architectural decision detected: [brief description] — Document reasoning and tradeoffs? Run `/sp.adr <decision-title>`"
-- MUST NOT auto-create ADRs; require user consent
+- MUST suggest ADR when architecturally significant decisions are made
 - ADR significance test (ALL must be true):
-  - Impact: Long-term consequences (framework, data model, API, security, platform)
+  - Impact: Long-term consequences
   - Alternatives: Multiple viable options considered
   - Scope: Cross-cutting and influences system design
 
 **Git Workflow**:
-- Feature branches: `<issue-number>-<feature-name>` (e.g., `001-phase-i-todo-crud`)
-- Commit messages: Follow Conventional Commits (e.g., `feat:`, `fix:`, `docs:`, `refactor:`)
+- Commit messages: Follow Conventional Commits
 - Pull requests: MUST reference specification and include summary of changes
 - MUST pass all tests and linting before merge
-
-**Code Review Requirements**:
-- All code changes MUST go through pull request review
-- MUST verify compliance with constitution principles
-- MUST verify implementation matches approved specification
-- MUST verify tests are included and passing
-- MUST verify no future-phase features leaked into current phase
 
 ## Governance
 
 **Constitutional Authority**:
 - This constitution is the supreme governing document for all agents and developers
 - All specifications, plans, and implementations MUST comply with this constitution
-- When conflicts arise between constitution and other documents, constitution takes precedence
 
 **Amendment Process**:
 1. Propose amendment with clear justification in user input
 2. Agent drafts updated constitution using `/sp.constitution` command
-3. Version is incremented according to semantic versioning:
-   - MAJOR: Backward incompatible governance/principle removals or redefinitions
-   - MINOR: New principle/section added or materially expanded guidance
-   - PATCH: Clarifications, wording, typo fixes, non-semantic refinements
+3. Version is incremented according to semantic versioning
 4. Sync Impact Report is generated showing affected templates and files
-5. User approves amendment
-6. Constitution is updated and all dependent templates are synchronized
-7. Amendment is committed with clear commit message
-
-**Compliance Review**:
-- All pull requests MUST include constitution compliance verification
-- Agents MUST flag any potential constitutional violations before implementation
-- Non-compliant code MUST be reverted and re-implemented following proper workflow
 
 **Versioning Policy**:
-- Constitution version follows semantic versioning (MAJOR.MINOR.PATCH)
-- Version is tracked in this document footer
-- Changes MUST be documented in Sync Impact Report comments
-
-**Conflict Resolution**:
-- When specifications conflict with constitution, constitution wins
-- When plans conflict with specifications, specifications win (plan must be updated)
-- When implementation conflicts with plans, plans win (implementation must be corrected)
-- Ambiguities MUST be resolved at the highest applicable level (constitution > spec > plan > tasks)
-
-**Scope of Authority**:
-- Constitution applies to ALL phases (Phase I through Phase V)
-- Constitution applies to ALL agents working on the Evolution of Todo project
-- Constitution applies to ALL features, regardless of size or complexity
-
-**Definition of Done** (for all features):
-- [ ] Specification approved by user
-- [ ] Plan approved by user
-- [ ] Tasks approved by user
-- [ ] All tasks completed
-- [ ] All tests passing
-- [ ] Constitution compliance verified
-- [ ] Code review completed
-- [ ] Documentation updated (if applicable)
-- [ ] ADRs created for significant decisions (if applicable)
-- [ ] PHR created for the work
-
-**Version**: 1.0.0 | **Ratified**: 2025-12-28 | **Last Amended**: 2025-12-28
+- Version: 1.3.0
+- Ratified: 2025-12-28
+- Last Amended: 2026-01-05

@@ -1,178 +1,159 @@
-# Todo Application - Phase I
+# Phase II Todo Web Application
 
-A simple in-memory todo application with a menu-driven command-line interface.
+A full-stack web application for todo management with user authentication.
 
-## Phase I Features
+## Features
 
-- **Add Tasks**: Create new tasks with title and optional description
-- **View Tasks**: Display all tasks with ID, title, status, and description
-- **Update Tasks**: Modify task title and/or description
-- **Delete Tasks**: Remove tasks from the list
-- **Toggle Status**: Mark tasks as Complete or Incomplete
+- User authentication (signup/signin)
+- Todo management (create, read, update, delete)
+- Todo completion tracking
+- User-specific data isolation
+- Responsive UI with gradient theme and animations
+- Modern SaaS-style interface
 
-## Requirements
+## Tech Stack
 
-- Python 3.11 or higher
-- pytest (for running tests)
+### Backend
+- **Framework**: FastAPI (Python 3.11+)
+- **Database**: Neon Serverless PostgreSQL
+- **ORM**: SQLModel
+- **Authentication**: Built-in JWT authentication system
 
-## Installation
+### Frontend
+- **Framework**: Next.js (React with TypeScript)
+- **Styling**: Tailwind CSS with custom gradient theme
+- **State Management**: React Context API
 
-1. Ensure Python 3.11+ is installed:
-   ```bash
-   python --version
-   ```
+## API Endpoints
 
-2. Clone or download this repository
+### Authentication
+- `POST /api/v1/auth/signup` - Create new user account
+- `POST /api/v1/auth/signin` - Authenticate user
+- `POST /api/v1/auth/signout` - Sign out user
+- `GET /api/v1/auth/me` - Get current user info
 
-3. (Optional) Install pytest for running tests:
-   ```bash
-   pip install pytest pytest-cov
-   ```
+### Todo Management
+- `GET /api/v1/todos` - Get all user's todos
+- `POST /api/v1/todos` - Create new todo
+- `PUT /api/v1/todos/{id}` - Update todo
+- `DELETE /api/v1/todos/{id}` - Delete todo
+- `PATCH /api/v1/todos/{id}/status` - Update todo completion status
 
-## Usage
+## Setup Instructions
 
-### Running the Application
-
-From the project root directory:
-
-**Windows:**
+### Backend Setup
 ```bash
-set PYTHONPATH=.
-python src/main.py
-```
+# Navigate to backend directory
+cd backend
 
-**Linux/macOS:**
-```bash
-PYTHONPATH=. python src/main.py
-```
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-or use the Python module approach:
+# Install dependencies
+pip install -r requirements.txt
 
-```bash
+# Set environment variables
+cp .env.example .env
+# Edit .env with your Neon PostgreSQL connection string and other settings
+
+# Run the application
 python -m src.main
 ```
 
-### Main Menu
-
-The application presents a menu with 6 options:
-
-```
-1. View all tasks
-2. Add a new task
-3. Update a task
-4. Delete a task
-5. Mark task complete/incomplete
-6. Exit
-```
-
-Simply enter the number of your choice and press Enter.
-
-### Example Session
-
-```
-Welcome to Todo Application - Phase I
-
-Main Menu:
-1. View all tasks
-2. Add a new task
-3. Update a task
-4. Delete a task
-5. Mark task complete/incomplete
-6. Exit
-
-Enter your choice: 2
-
---- Add New Task ---
-Enter task title: Buy groceries
-Enter task description (optional): Milk, eggs, bread
-
-Task added successfully! (ID: 1)
-
-Main Menu:
-...
-Enter your choice: 1
-
---- All Tasks ---
-ID: 1 | Title: Buy groceries | Status: Incomplete
-Description: Milk, eggs, bread
-
-...
-Enter your choice: 6
-
-Exiting application. All data will be lost.
-Goodbye!
-```
-
-## Important Notes
-
-- **No Persistence**: All task data exists only in memory during the application session. When you exit (option 6), all data is lost.
-- **Single User**: Designed for single-user, single-session use
-- **In-Memory Only**: No databases or file storage (Phase I constraint)
-
-## Running Tests
-
-Run all tests:
+### Frontend Setup
 ```bash
-pytest
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+# or
+yarn install
+
+# Set environment variables
+cp .env.example .env
+# Edit .env with your backend API URL and other settings
+
+# Run the development server
+npm run dev
+# or
+yarn dev
 ```
 
-Run with verbose output:
-```bash
-pytest -v
+## Environment Variables
+
+### Backend (.env)
+```
+DATABASE_URL=your_neon_postgresql_connection_string
+SECRET_KEY=your_secret_key_for_jwt_tokens
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-Run with coverage report:
-```bash
-pytest --cov=src --cov-report=term-missing
+### Frontend (.env)
 ```
-
-## Project Structure
-
-```
-todo_app/
-├── src/
-│   ├── models/          # Task data model
-│   ├── services/        # Business logic (CRUD operations)
-│   ├── cli/             # User interface (menu, input, output)
-│   └── main.py          # Application entry point
-├── tests/
-│   ├── unit/            # Unit tests
-│   └── integration/     # Integration tests
-├── specs/               # Specification documents
-├── pyproject.toml       # Project configuration
-└── README.md            # This file
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 ```
 
 ## Development
 
-This project follows Spec-Driven Development principles with clear separation of concerns:
+### Backend
+- API documentation available at `http://localhost:8000/docs`
+- Use `uvicorn src.main:app --reload` for development with auto-reload
 
-- **Models**: Task dataclass with validation
-- **Services**: TaskService handles all CRUD operations
-- **CLI**: User interface components (menu, input handling, output formatting)
+### Frontend
+- Available at `http://localhost:3000`
+- Hot reloading enabled in development mode
 
-See `specs/001-phase-i-basic-todo/` for detailed specification, plan, and design documents.
+## Project Structure
 
-## Constitutional Compliance
+```
+backend/
+├── src/
+│   ├── models/          # Data models (User, Todo)
+│   ├── services/        # Business logic
+│   ├── api/             # API route definitions
+│   ├── database/        # Database configuration
+│   ├── middleware/      # Authentication middleware
+│   ├── utils/           # Utility functions
+│   └── main.py          # Application entry point
+├── tests/
+└── requirements.txt
 
-Phase I strictly adheres to the Evolution of Todo constitution:
-- ✅ No databases or persistence
-- ✅ No file system operations
-- ✅ No web frameworks or APIs
-- ✅ No authentication
-- ✅ Single-user, in-memory only
-- ✅ Python 3.11+ standard library only
+frontend/
+├── src/
+│   ├── components/      # React components
+│   ├── pages/           # Next.js pages
+│   ├── services/        # API service layer
+│   ├── styles/          # CSS and styling
+│   ├── utils/           # Utility functions
+│   └── types/           # TypeScript type definitions
+├── public/
+├── package.json
+└── next.config.js
+```
 
-## License
+## Architecture
 
-This is an educational project for demonstrating Spec-Driven Development.
+The application follows a clean architecture pattern with clear separation of concerns:
 
-## Future Phases
+- **Models**: Define data structures and validation rules
+- **Services**: Contain business logic and data access operations
+- **API**: Define routes and handle HTTP requests
+- **Middleware**: Handle cross-cutting concerns like authentication
+- **Frontend**: Handle UI rendering and user interactions
 
-Phase I is the foundation. Future phases will add:
-- Phase II: Multi-user support, authentication, cloud persistence (Neon DB)
-- Phase III: Real-time collaboration, notifications, advanced search
-- Phase IV: Agent orchestration, MCP integration, workflow automation
-- Phase V: Distributed architecture with event sourcing and CQRS
+## Security
 
-Each phase builds on the previous while maintaining the clean architecture established in Phase I.
+- Passwords are hashed using bcrypt
+- JWT tokens for authentication
+- User-specific data access enforcement
+- Input validation and sanitization
+- CORS configured for frontend integration
+
+## Error Handling
+
+- Comprehensive error responses with appropriate HTTP status codes
+- User-friendly error messages
+- Proper logging for debugging and monitoring
