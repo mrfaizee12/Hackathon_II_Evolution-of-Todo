@@ -51,11 +51,7 @@ tests:
 - DO NOT create separate chatbot page
 
 ## ENV CONFIG (ALREADY SET)
-DATABASE_URL=postgresql://neondb_owner:npg_WLsUO29puhgj@ep-odd-boat-a4qnunlz-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
-SECRET_KEY=a5fc2776eecd3988b703c53fa959331099a9fc24d7190b0d62a244b5f4b09c54
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-OPENROUTER_API_KEY=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
+
 
 ## SUCCESS CRITERIA
 - Phase II app works 100%
