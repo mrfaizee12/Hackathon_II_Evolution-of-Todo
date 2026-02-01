@@ -1,34 +1,36 @@
-import React, { HTMLAttributes } from 'react';
+'use client';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  elevated?: boolean;
-  gradient?: boolean;
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+  variant?: 'default' | 'elevated' | 'outlined';
 }
 
-const Card: React.FC<CardProps> = ({
-  children,
-  elevated = false,
-  gradient = false,
-  className = '',
-  ...props
-}) => {
-  const baseClasses = 'rounded-2xl transition-all duration-300 border border-gray-100';
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = 'default', children, ...props }, ref) => {
+    const variantClasses = {
+      default: 'bg-brand-darker/50 backdrop-blur-sm border border-brand-gray/20',
+      elevated: 'bg-brand-darker/70 backdrop-blur-md border border-brand-gray/30 shadow-lg shadow-black/20',
+      outlined: 'bg-brand-darker/30 border border-brand-gray/40',
+    };
 
-  const elevationClasses = elevated
-    ? 'shadow-lg hover:shadow-xl transform hover:-translate-y-1'
-    : 'shadow-md hover:shadow-lg transform hover:-translate-y-0.5';
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'rounded-xl p-6',
+          variantClasses[variant],
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+Card.displayName = 'Card';
 
-  const gradientClass = gradient
-    ? 'bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50'
-    : 'bg-white';
-
-  const classes = `${baseClasses} ${elevationClasses} ${gradientClass} ${className}`;
-
-  return (
-    <div className={classes} {...props}>
-      {children}
-    </div>
-  );
-};
-
-export default Card;
+export { Card };

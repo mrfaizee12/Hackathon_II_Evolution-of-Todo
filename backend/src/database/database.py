@@ -25,6 +25,8 @@ def init_db():
     """
     from ..models.user import User  # Import here to avoid circular imports
     from ..models.todo import Todo  # Import here to avoid circular imports
+    from ..models.conversation import AIConversation  # Import to ensure relationships are registered
+    from ..models.message import AIMessage  # Import to ensure relationships are registered
 
     from sqlmodel import SQLModel
     # Create all tables, including updating existing ones with new columns

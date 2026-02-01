@@ -1,0 +1,325 @@
+<!--
+Sync Impact Report
+==================
+Version: 1.3.0 → 2.0.0
+Change Type: MAJOR - Phase III AI Todo Chatbot introduction with AI framework authorization and new architectural constraints
+
+Changes Made:
+- Updated Phase Isolation Policy:
+  - Phase I (In-Memory Console Application) is finalized and immutable
+  - Phase II Basic (Full-Stack Web Application with basic todo features) is completed and must not be broken
+  - Phase II Intermediate (Todo priorities, tags, search, filters, UI enhancements) is completed and must not be broken
+  - All new development is now restricted to Phase III AI Todo Chatbot as incremental, non-breaking extensions
+- Removed Global Restriction: "No AI or agent frameworks" - now authorized for Phase III
+- Added Phase III AI Todo Chatbot Extension with authorized features:
+  - AI Chatbot as native feature inside dashboard (not separate app/page)
+  - Backend handles AI logic, Frontend handles UI only
+  - State stored in Neon PostgreSQL ONLY (stateless server)
+  - Uses OpenRouter API via OpenAI Agents SDK compatibility
+  - Model: openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free
+  - Base URL: https://openrouter.ai/api/v1
+  - UI opens from dashboard sidebar, no auto-execution on page load
+- Updated Technology Requirements to include AI/Agent frameworks for Phase III
+- Maintained all existing Phase II requirements while adding AI-specific constraints
+
+Templates Status:
+- ✅ .specify/templates/plan-template.md - Aligned with updated architecture options including AI frameworks
+- ✅ .specify/templates/spec-template.md - Aligned with AI chatbot requirements
+- ✅ .specify/templates/tasks-template.md - Aligned with AI framework requirements for Phase III
+- ✅ .specify/templates/phr-template.prompt.md - Aligned with updated constitution
+
+Follow-up Actions:
+- None - all placeholders filled, all templates aligned
+
+Notes:
+- This amendment enables Phase III AI Todo Chatbot development while maintaining strict phase isolation and non-breaking extension policy. AI frameworks are now authorized specifically for Phase III, reversing the previous global restriction.
+-->
+
+# Evolution of Todo Project Constitution
+
+## Core Principles
+
+### I. Spec-Driven Development (Mandatory)
+
+**No agent may write code without approved specs and tasks.** All development work MUST follow the strict workflow:
+
+1. Constitution → Specifications → Plan → Tasks → Implement
+2. Every feature begins with a complete specification in `specs/<feature>/spec.md`
+3. Every feature requires an approved implementation plan in `specs/<feature>/plan.md`
+4. Every feature requires a task list in `specs/<feature>/tasks.md` before implementation
+5. Implementation begins ONLY after user approval of specifications and tasks
+
+**Rationale**: Spec-Driven Development ensures all stakeholders understand requirements before code is written, prevents scope creep, enables accurate effort estimation, and creates traceable documentation. This is particularly critical for the Evolution of Todo project, which spans multiple phases with increasing complexity.
+
+**Violations**: Code written without approved specs is considered non-compliant and MUST be reverted.
+
+### II. Agent Behavior Rules
+
+**Agents are implementation executors, not designers.** The following rules are non-negotiable:
+
+- **No Manual Coding by Humans**: All code MUST be written by agents following approved specifications
+- **No Feature Invention**: Agents MUST NOT add features, capabilities, or "improvements" beyond specifications
+- **No Deviation from Specifications**: Agents MUST implement exactly what is specified, no more, no less
+- **Refinement at Spec Level**: When issues or improvements are identified, agents MUST suggest specification updates rather than directly modifying code
+- **Clarification Required**: When specifications are ambiguous, agents MUST ask for clarification before proceeding
+
+**Rationale**: Clear separation between design (human) and implementation (agent) prevents uncontrolled complexity, maintains architectural consistency, and ensures all stakeholders approve changes before implementation.
+
+**Human as Tool**: Agents MUST invoke users for clarification when encountering:
+- Ambiguous requirements (ask 2-3 targeted questions)
+- Unforeseen dependencies (surface and ask for prioritization)
+- Architectural uncertainty (present options with tradeoffs)
+- Completion checkpoints (summarize and confirm next steps)
+
+### III. Phase Governance
+
+**Each phase is strictly scoped; future-phase features MUST NOT leak into earlier phases.**
+
+The Evolution of Todo project consists of multiple phases with strict isolation:
+
+**Phase Isolation Policy**:
+- Phase I (In-Memory Console Application) is finalized and immutable.
+- Phase II Basic (Full-Stack Web Application with basic todo features) is completed and must not be broken.
+- Phase II Intermediate (Todo priorities, tags, search, filters, UI enhancements) is completed and must not be broken.
+- All new development is restricted to Phase III AI Todo Chatbot as incremental, non-breaking extensions.
+
+**Phase III — AI Todo Chatbot (Authorized)**:
+Phase III is permitted to evolve the todo application to include AI-powered features while maintaining all existing functionality. AI features MUST be implemented as native dashboard components without breaking existing functionality or requiring separate applications/pages.
+
+**Allowed functionality additions in Phase III AI Todo Chatbot**:
+- AI Chatbot as native feature inside dashboard (not separate app/page)
+- Backend handles AI logic, Frontend handles UI only
+- State stored in Neon PostgreSQL ONLY (stateless server)
+- Uses OpenRouter API via OpenAI Agents SDK compatibility
+- Model: openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free
+- Base URL: https://openrouter.ai/api/v1
+- UI opens from dashboard sidebar, no auto-execution on page load
+- Chatbot functionality integrated seamlessly with existing todo features
+
+**Mandatory Technology Requirements (Phase III)**:
+- AI Provider: OpenRouter API (compatible with OpenAI Agents SDK)
+- Model: openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free
+- Base URL: https://openrouter.ai/api/v1
+- Backend: FastAPI (Python REST API) - extending Phase II architecture
+- Database: Neon Serverless PostgreSQL - continuing Phase II architecture
+- ORM / Data Layer: SQLModel - continuing Phase II architecture
+- Frontend: Next.js (React, TypeScript) - extending Phase II architecture
+- Authentication: Better Auth - continuing Phase II architecture
+- Dependency management: UV - continuing Phase II architecture
+
+**Updated Global Restrictions** (for future phases beyond Phase III):
+- No background jobs or workers
+- No real-time features
+- No future-phase infrastructure or technologies
+- AI and agent frameworks are NOW AUTHORIZED for Phase III only (previously restricted)
+
+**Enforcement**:
+- Phase III work must extend existing Phase II Basic and Intermediate behavior without refactoring or breaking changes.
+- AI features MUST be native dashboard components, NOT separate applications or pages.
+- Backend AI logic MUST be stateless with all state stored in Neon PostgreSQL.
+- This constitution amendment is authoritative and must be enforced across all specifications, plans, tasks, and implementations.
+
+**Phase Isolation Rules**:
+1. Each phase has its own specification in `specs/phase-<N>-<name>/`
+2. Implementation MUST NOT reference or depend on future-phase features
+3. Architecture MAY evolve only through updated specifications and plans
+4. Phase boundaries are enforcement points; no feature may span phases without explicit specification
+5. AI and agent frameworks are now authorized specifically for Phase III (removed previous restriction)
+6. **No breaking changes** are permitted to completed phases (I, II Basic, II Intermediate).
+7. Phase III AI features MUST integrate seamlessly with existing dashboard without disrupting current functionality.
+
+**Rationale**: Strict phase isolation prevents premature optimization, maintains focus on current deliverables, enables incremental validation, and ensures each phase delivers standalone value while maintaining backward compatibility. The authorization of AI frameworks for Phase III represents a strategic evolution while preserving all existing functionality.
+
+### IV. Technology Stack
+
+**The following technology constraints are mandatory across all phases:**
+
+**Backend** (Phase II+ and Phase III):
+- Language: Python 3.11+
+- Framework: FastAPI (async web framework) for REST API
+- ORM: SQLModel (Pydantic + SQLAlchemy)
+- Database: Neon Serverless PostgreSQL
+- Dependency Management: UV
+- AI Integration: OpenRouter API compatible with OpenAI Agents SDK
+- Model: openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free
+- Base URL: https://openrouter.ai/api/v1
+
+**Frontend** (Phase II+ and Phase III):
+- Framework: Next.js 14+ (App Router, React, TypeScript)
+- Language: TypeScript
+- UI: Tailwind CSS (with gradient themes)
+- AI Chat Interface: Integrated into existing dashboard UI, opened from sidebar
+
+**Authentication** (Phase II+ and Phase III):
+- Solution: Better Auth (signup/signin only)
+
+**Architecture** (Phase II+ and Phase III):
+- Full-stack web application with stateless services
+- AI logic in backend, UI in frontend
+- All state persisted in Neon PostgreSQL database
+- Native dashboard integration for AI features
+
+**Infrastructure** (Authorized Phases):
+- Containerization: Docker
+- Orchestration: Kubernetes
+
+**Rationale**: Standardizing the technology stack ensures consistency across phases, reduces cognitive load, enables code reuse, and simplifies integration. These technologies are chosen for their cloud-native capabilities, strong typing, async support, and proven reliability. The addition of AI frameworks in Phase III extends the stack to include AI capabilities while maintaining the existing architecture patterns.
+
+**Exceptions**: Technology changes MUST be proposed through constitution amendments with clear justification.
+
+### V. Quality Principles
+
+**Clean Architecture**:
+- MUST maintain clear separation of concerns (domain, application, infrastructure layers)
+- MUST define explicit boundaries between layers with well-defined interfaces
+- MUST ensure domain logic is independent of frameworks and infrastructure
+- Business rules MUST NOT depend on UI, database, or external services
+
+**Stateless Services** (Phase III AI Logic):
+- AI services MUST be stateless to enable horizontal scaling
+- All state MUST be externalized to databases, caches, or message queues
+- Session state MUST be handled by centralized Auth (Better Auth) and DB
+- AI conversation state MUST be stored in Neon PostgreSQL
+
+**Cloud-Native Readiness**:
+- Applications MUST support 12-factor app principles
+- Configuration MUST be environment-based (via .env or secret management)
+- Services MUST expose health checks and readiness probes
+- Logs MUST be structured (JSON) and written to stdout
+- Metrics MUST be exposed in Prometheus format
+
+**Testing Discipline**:
+- All features MUST have integration tests covering primary user journeys
+- All APIs MUST have contract tests
+- Critical business logic MUST have unit tests
+- AI features MUST include conversation flow tests
+- Test coverage targets: 80% line coverage minimum
+
+**Security**:
+- MUST follow OWASP Top 10 guidelines
+- MUST NOT hardcode secrets, credentials, or tokens
+- MUST use environment variables for all secrets
+- MUST implement proper authentication and authorization (Phase II+)
+- MUST sanitize all user inputs including AI chat inputs
+- MUST implement rate limiting on public APIs and AI endpoints (Phase II+)
+- MUST protect against prompt injection attacks in AI features
+
+**Performance**:
+- API responses MUST complete within 200ms p95 latency under normal load
+- AI responses MUST complete within 5000ms p95 latency under normal load
+- Database queries MUST be optimized and indexed appropriately
+- MUST implement caching strategies for frequently accessed data
+
+**Rationale**: Quality principles ensure the system remains maintainable, scalable, and reliable as it evolves across phases. These principles prevent technical debt accumulation and enable sustainable long-term development. The addition of AI-specific requirements ensures safe and performant AI integration while maintaining security and scalability standards.
+
+## Technology Constraints
+
+**Language & Runtime Requirements**:
+- Python 3.11 or higher for all backend services including AI logic
+- Node.js 18+ for frontend tooling and Next.js runtime
+- TypeScript 5+ for all frontend code
+- Strict type checking enabled (mypy for Python, strict mode for TypeScript)
+
+**Dependency Management**:
+- Backend: UV (Python package manager)
+- Frontend: npm or pnpm
+- MUST pin exact versions in production
+- MUST document all direct dependencies with purpose
+
+**Database Requirements**:
+- Primary database: Neon Serverless PostgreSQL
+- MUST use SQLModel for ORM operations
+- MUST version control all schema migrations
+- MUST support rollback for all migrations
+- AI conversation history MUST be stored in Neon PostgreSQL
+
+**AI Framework Requirements** (Phase III):
+- AI Provider: OpenRouter API
+- Compatible with: OpenAI Agents SDK
+- Model: openrouter/deepseek/deepseek-r1-0528-qwen3-8b:free
+- Base URL: https://openrouter.ai/api/v1
+- MUST NOT use OpenAI API key directly
+- MUST NOT use Cohere or Gemini
+- AI integration MUST be stateless with state stored in database
+
+**API Standards**:
+- REST APIs MUST follow OpenAPI 3.0+ specification
+- AI APIs MUST follow OpenAI-compatible interface standards
+- MUST use semantic HTTP status codes
+- MUST implement proper error response formats (RFC 7807 Problem Details)
+- MUST version APIs (e.g., `/api/v1/...`)
+
+**Development Environment**:
+- MUST support local development
+- MUST provide setup documentation in quickstart.md
+- MUST use consistent code formatting (Black for Python, Prettier for TypeScript)
+- MUST enforce linting (ruff for Python, ESLint for TypeScript)
+
+**UI/UX Requirements** (Phase II+ and Phase III):
+- MUST implement modern, professional, hackathon-quality UI
+- MUST use gradient-based colorful theme across the application
+- MUST include subtle animations (hover effects, transitions, loading states)
+- MUST implement smooth page transitions
+- MUST use clean card-based layouts and spacing
+- MUST include a Landing Page with hero section and footer
+- UI enhancements MUST be visual only and MUST NOT change functionality
+- Allowed UI enhancements: Public landing page, Hero section, Footer, Improved authenticated dashboard UI
+- Phase III AI Chatbot: Integrated into dashboard sidebar, opens as native component
+- NO auto-execution of AI features on page load
+
+## Development Workflow
+
+**Spec-Driven Development Workflow** (mandatory for all features):
+
+1. **Constitution Review**: Verify feature aligns with constitutional principles
+2. **Specification** (`/sp.specify`):
+   - Create feature specification in `specs/<feature>/spec.md`
+   - Include user stories, requirements (FRs), success criteria (SCs)
+3. **Planning** (`/sp.plan`):
+   - Research existing codebase patterns
+   - Design architecture and implementation approach
+   - Document in `specs/<feature>/plan.md`
+4. **Task Breakdown** (`/sp.tasks`):
+   - Break down plan into specific, testable tasks
+   - Document in `specs/<feature>/tasks.md`
+5. **Implementation** (`/sp.implement`):
+   - Execute tasks in dependency order
+   - Commit after each task or logical group
+6. **Review & Integration**:
+   - Run all tests and verify acceptance criteria
+   - Verify NO breaking changes to existing functionality
+
+**Prompt History Records (PHR)**:
+- MUST create PHR after every user interaction involving implementation, planning, or specification
+- PHR routing: constitution → `history/prompts/constitution/`, feature → `history/prompts/<feature>/`, general → `history/prompts/general/`
+
+**Architectural Decision Records (ADR)**:
+- MUST suggest ADR when architecturally significant decisions are made
+- ADR significance test (ALL must be true):
+  - Impact: Long-term consequences
+  - Alternatives: Multiple viable options considered
+  - Scope: Cross-cutting and influences system design
+
+**Git Workflow**:
+- Commit messages: Follow Conventional Commits
+- Pull requests: MUST reference specification and include summary of changes
+- MUST pass all tests and linting before merge
+- Phase III commits MUST NOT break existing Phase I/II/Intermediate functionality
+
+## Governance
+
+**Constitutional Authority**:
+- This constitution is the supreme governing document for all agents and developers
+- All specifications, plans, and implementations MUST comply with this constitution
+- Phase III AI Todo Chatbot development MUST NOT violate any existing Phase I/II/Intermediate requirements
+
+**Amendment Process**:
+1. Propose amendment with clear justification in user input
+2. Agent drafts updated constitution using `/sp.constitution` command
+3. Version is incremented according to semantic versioning
+4. Sync Impact Report is generated showing affected templates and files
+
+**Versioning Policy**:
+- Version: 2.0.0
+- Ratified: 2025-12-28
+- Last Amended: 2026-01-15

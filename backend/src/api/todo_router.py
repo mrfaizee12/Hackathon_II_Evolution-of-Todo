@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 from typing import List, Optional
 from datetime import datetime
 
@@ -7,14 +7,7 @@ from ..models.todo import Todo, TodoCreate, TodoRead, TodoUpdate, TodoPatchStatu
 from ..models.user import User
 from ..database.database import get_session
 from ..middleware.auth import get_current_active_user
-from ..services.todo_service import (
-    create_todo,
-    get_todos_by_user,
-    get_todo_by_id_and_user,
-    update_todo,
-    delete_todo,
-    update_todo_status
-)
+from ..services.todo_service import TodoService
 
 todo_router = APIRouter()
 
@@ -28,7 +21,8 @@ def create_new_todo(
     Create a new todo for the authenticated user.
     """
     try:
-        todo = create_todo(session, todo_create, str(current_user.id))
+        todo_service = TodoService()
+        todo = todo_service.create_todo(session, str(current_user.id), todo_create)
         return todo
     except Exception as e:
         raise HTTPException(
@@ -64,7 +58,8 @@ def read_todos(
             from datetime import datetime
             due_date_to_dt = datetime.fromisoformat(due_date_to.replace('Z', '+00:00'))
 
-        todos = get_todos_by_user(
+        todo_service = TodoService()
+        todos = todo_service.get_todos_by_user(
             session,
             str(current_user.id),
             search=search,
@@ -95,7 +90,8 @@ def update_existing_todo(
     Update an existing todo for the authenticated user.
     """
     try:
-        updated_todo = update_todo(session, todo_id, todo_update, str(current_user.id))
+        todo_service = TodoService()
+        updated_todo = todo_service.update_todo(session, todo_id, str(current_user.id), todo_update)
         if not updated_todo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -122,7 +118,8 @@ def delete_existing_todo(
     Delete a todo for the authenticated user.
     """
     try:
-        success = delete_todo(session, todo_id, str(current_user.id))
+        todo_service = TodoService()
+        success = todo_service.delete_todo(session, todo_id, str(current_user.id))
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -151,7 +148,8 @@ def update_todo_completion_status(
     Update the completion status of a todo for the authenticated user.
     """
     try:
-        updated_todo = update_todo_status(session, todo_id, status_update, str(current_user.id))
+        todo_service = TodoService()
+        updated_todo = todo_service.update_todo_status(session, todo_id, str(current_user.id), status_update)
         if not updated_todo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

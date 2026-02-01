@@ -6,6 +6,7 @@ import uuid
 # Handle circular import for relationship
 if TYPE_CHECKING:
     from .todo import Todo
+    from .conversation import AIConversation
 
 class UserBase(SQLModel):
     email: str = Field(unique=True, nullable=False, max_length=255)
@@ -22,6 +23,9 @@ class User(UserBase, table=True):
 
     # Relationship to todos
     todos: List["Todo"] = Relationship(back_populates="user")
+
+    # Relationship to conversations
+    conversations: List["AIConversation"] = Relationship(back_populates="user")
 
 class UserCreate(UserBase):
     """

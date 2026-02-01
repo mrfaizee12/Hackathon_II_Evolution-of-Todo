@@ -1,0 +1,239 @@
+# API Contract: MCP Tools for AI Todo Chatbot
+
+## Overview
+Contract for the 5 MCP tools exposed by the AI Todo Chatbot: add_task, list_tasks, complete_task, delete_task, update_task.
+
+## Tool Definitions
+
+### 1. add_task
+**Description**: Add a new task to the user's todo list
+**Parameters**:
+```json
+{
+  "title": {
+    "type": "string",
+    "description": "The title of the task",
+    "required": true
+  },
+  "description": {
+    "type": "string",
+    "description": "Optional description of the task"
+  },
+  "priority": {
+    "type": "string",
+    "enum": ["low", "medium", "high"],
+    "description": "Priority level"
+  },
+  "tags": {
+    "type": "string",
+    "description": "Comma-separated tags for the task"
+  },
+  "due_date": {
+    "type": "string",
+    "description": "ISO format date string for due date"
+  },
+  "ai_context": {
+    "type": "string",
+    "description": "Context for AI-generated task"
+  }
+}
+```
+**Response**:
+```json
+{
+  "success": {
+    "type": "boolean",
+    "description": "Whether the operation was successful"
+  },
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the created task"
+  },
+  "message": {
+    "type": "string",
+    "description": "Status message"
+  }
+}
+```
+
+### 2. list_tasks
+**Description**: List tasks from the user's todo list with optional filtering
+**Parameters**:
+```json
+{
+  "status": {
+    "type": "string",
+    "enum": ["all", "pending", "completed"],
+    "description": "Filter by completion status"
+  },
+  "limit": {
+    "type": "integer",
+    "description": "Maximum number of tasks to return"
+  },
+  "offset": {
+    "type": "integer",
+    "description": "Number of tasks to skip"
+  }
+}
+```
+**Response**:
+```json
+{
+  "success": {
+    "type": "boolean",
+    "description": "Whether the operation was successful"
+  },
+  "tasks": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "completed": {"type": "boolean"},
+        "priority": {"type": "string"},
+        "tags": {"type": "string"},
+        "due_date": {"type": "string"},
+        "created_at": {"type": "string"},
+        "updated_at": {"type": "string"}
+      }
+    }
+  },
+  "message": {
+    "type": "string",
+    "description": "Status message"
+  }
+}
+```
+
+### 3. complete_task
+**Description**: Mark a task as completed/done
+**Parameters**:
+```json
+{
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the task to mark as completed",
+    "required": true
+  }
+}
+```
+**Response**:
+```json
+{
+  "success": {
+    "type": "boolean",
+    "description": "Whether the operation was successful"
+  },
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the completed task"
+  },
+  "message": {
+    "type": "string",
+    "description": "Status message"
+  }
+}
+```
+
+### 4. delete_task
+**Description**: Delete a task from the user's todo list
+**Parameters**:
+```json
+{
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the task to delete",
+    "required": true
+  }
+}
+```
+**Response**:
+```json
+{
+  "success": {
+    "type": "boolean",
+    "description": "Whether the operation was successful"
+  },
+  "message": {
+    "type": "string",
+    "description": "Status message"
+  }
+}
+```
+
+### 5. update_task
+**Description**: Update an existing task in the user's todo list
+**Parameters**:
+```json
+{
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the task to update",
+    "required": true
+  },
+  "title": {
+    "type": "string",
+    "description": "New title for the task"
+  },
+  "description": {
+    "type": "string",
+    "description": "New description for the task"
+  },
+  "completed": {
+    "type": "boolean",
+    "description": "Whether the task is completed"
+  },
+  "priority": {
+    "type": "string",
+    "enum": ["low", "medium", "high"],
+    "description": "New priority level"
+  },
+  "tags": {
+    "type": "string",
+    "description": "New comma-separated tags for the task"
+  },
+  "due_date": {
+    "type": "string",
+    "description": "New ISO format date string for due date"
+  },
+  "ai_context": {
+    "type": "string",
+    "description": "Context for AI-assisted update"
+  }
+}
+```
+**Response**:
+```json
+{
+  "success": {
+    "type": "boolean",
+    "description": "Whether the operation was successful"
+  },
+  "task_id": {
+    "type": "string",
+    "description": "The ID of the updated task"
+  },
+  "message": {
+    "type": "string",
+    "description": "Status message"
+  }
+}
+```
+
+## Error Handling
+All tools return standardized error responses:
+```json
+{
+  "success": false,
+  "message": "Error message describing the issue",
+  "error_code": "string"
+}
+```
+
+## Authentication
+All tools require a valid user session via the existing authentication system. The user ID is automatically associated with each tool call based on the authenticated user.
+
+## Validation
+All tools validate input parameters according to the specified schema and return appropriate error messages for invalid inputs.

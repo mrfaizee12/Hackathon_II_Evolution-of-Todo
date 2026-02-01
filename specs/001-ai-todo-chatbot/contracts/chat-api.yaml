@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: AI Todo Chatbot API
+  description: API for the AI Todo Chatbot feature
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /api/v1/chat/{user_id}:
+    post:
+      summary: Send a message to the AI assistant
+      description: Process user input through the AI assistant and return a response
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The ID of the user sending the message
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: The user's message to the AI assistant
+                  example: "Add a task to buy groceries"
+                conversation_id:
+                  type: string
+                  description: Optional conversation ID to continue existing conversation
+                  example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Successful response from the AI assistant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    description: The AI assistant's response
+                    example: "I've added the task 'buy groceries' to your todo list."
+                  conversation_id:
+                    type: string
+                    description: The conversation ID for continued interaction
+                    example: "123e4567-e89b-12d3-a456-426614174000"
+                  action_performed:
+                    type: boolean
+                    description: Whether an action was performed on the todo list
+                    example: true
+        '400':
+          description: Bad request - invalid input
+        '401':
+          description: Unauthorized - invalid or missing authentication
+        '500':
+          description: Internal server error
+
+  /api/v1/conversations/{user_id}:
+    get:
+      summary: Get user's chat conversations
+      description: Retrieve a list of the user's AI chat conversations
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The ID of the user
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of conversations to return
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          description: Number of conversations to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of user's conversations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AIConversation'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized - invalid or missing authentication
+        '500':
+          description: Internal server error
+
+  /api/v1/conversations/{conversation_id}/messages:
+    get:
+      summary: Get messages in a conversation
+      description: Retrieve messages in a specific AI chat conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          description: The ID of the conversation
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of messages to return
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of messages to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of messages in the conversation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AIMessage'
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized - invalid or missing authentication
+        '404':
+          description: Conversation not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    AIConversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the conversation
+        title:
+          type: string
+          description: Summary of the conversation topic
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the conversation was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the conversation was last updated
+        is_active:
+          type: boolean
+          description: Whether the conversation is currently active
+
+    AIMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+        sender_type:
+          type: string
+          enum: [USER, ASSISTANT]
+          description: Who sent the message
+        content:
+          type: string
+          description: The content of the message
+        message_type:
+          type: string
+          enum: [TEXT, ACTION_REQUEST, ACTION_RESULT, SYSTEM]
+          description: The type of message
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the message was created

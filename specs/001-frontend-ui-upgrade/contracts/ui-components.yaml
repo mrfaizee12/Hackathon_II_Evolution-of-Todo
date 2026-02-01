@@ -1,0 +1,186 @@
+# UI Component Contracts: Frontend UI Upgrade
+
+## Overview
+This document defines the UI component contracts for the frontend UI upgrade. Since this is a UI-only change, the contracts focus on the interface between the new UI components and the existing backend APIs, ensuring all functionality is preserved.
+
+## UI State Management Contracts
+
+### Sidebar Component Contract
+```
+Interface: SidebarProps
+- isOpen: boolean
+- onToggle: () => void
+- children: ReactNode
+- className?: string
+
+Events:
+- onToggle: Triggered when user clicks toggle button
+- onOpen: Triggered when sidebar becomes visible
+- onClose: Triggered when sidebar becomes hidden
+```
+
+### Chat Bubble Component Contract
+```
+Interface: ChatBubbleProps
+- message: string
+- sender: 'user' | 'ai'
+- timestamp?: Date
+- isPending?: boolean
+- className?: string
+
+Visual States:
+- user: Right-aligned, darker background
+- ai: Left-aligned, lighter background
+- isPending: Shows typing indicator
+```
+
+### Chat Input Component Contract
+```
+Interface: ChatInputProps
+- onSubmit: (message: string) => void
+- placeholder?: string
+- disabled?: boolean
+- autoFocus?: boolean
+
+Events:
+- onSubmit: Triggered when user submits message
+- onInputChange: Triggered when input value changes
+```
+
+## Page-Level Component Contracts
+
+### Landing Page Contract
+```
+Route: /
+Components:
+- Navigation: Header with logo, sign in/up buttons
+- HeroSection: Animated text and value proposition
+- Footer: Standard footer with links
+
+API Dependencies:
+- None (static content with auth links)
+```
+
+### Dashboard Page Contract
+```
+Route: /dashboard
+Components:
+- Header: With sign out button
+- Sidebar: Collapsible AI assistant panel
+- TodoList: Existing todo functionality
+
+API Dependencies:
+- GET /api/todos - Fetch user's todos
+- POST /api/todos - Create new todo
+- PUT /api/todos/:id - Update todo
+- DELETE /api/todos/:id - Delete todo
+- POST /api/chat - Send message to AI assistant
+```
+
+### Authentication Pages Contract
+```
+Routes:
+- /auth/signin
+- /auth/signup
+
+Components:
+- AuthForm: Form with appropriate fields
+- SocialAuth: Social login options (if applicable)
+
+API Dependencies:
+- POST /api/auth/signin - User sign in
+- POST /api/auth/signup - User sign up
+- GET /api/auth/me - Verify user session
+```
+
+## Responsive Behavior Contracts
+
+### Breakpoint Specifications
+```
+Mobile: max-width 768px
+- Sidebar: Overlay style, full height
+- Layout: Single column
+- Navigation: Hamburger menu
+
+Tablet: min-width 769px, max-width 1024px
+- Sidebar: Partially visible, 250px width
+- Layout: Two column (sidebar/content)
+- Navigation: Condensed but visible
+
+Desktop: min-width 1025px
+- Sidebar: Full visible, 300px width
+- Layout: Two column (sidebar/content)
+- Navigation: Full menu items
+```
+
+## Animation Specifications
+
+### Component Animation Contracts
+```
+Sidebar Animation:
+- Duration: 300ms
+- Easing: easeInOut
+- Property: transform translateX
+- Closed state: translateX(-100%)
+- Open state: translateX(0%)
+
+Hero Text Animation:
+- Duration: 500ms
+- Stagger delay: 100ms between elements
+- Property: opacity and translateY
+- Initial: opacity 0, translateY(20px)
+- Final: opacity 1, translateY(0)
+```
+
+## Accessibility Contracts
+
+### ARIA Attributes Contract
+```
+Sidebar:
+- role: region
+- aria-label: "AI Assistant Panel"
+- aria-expanded: true/false
+
+Chat Components:
+- ChatBubble: role="article", aria-label="Chat message"
+- ChatInput: role="form", aria-label="Message input"
+
+Navigation:
+- role: navigation
+- aria-label: "Main navigation" or "Auth navigation"
+```
+
+## Event Handling Contracts
+
+### User Interaction Events
+```
+Sidebar Toggle:
+- Trigger: Click on toggle button
+- Action: Toggle open/close state
+- Effect: Animate sidebar visibility
+
+Form Submission:
+- Trigger: Form submit or Enter key
+- Action: Call onSubmit handler
+- Effect: Process user input
+
+Responsive Behavior:
+- Trigger: Window resize
+- Action: Update component layout
+- Effect: Adapt to new viewport size
+```
+
+## Error State Contracts
+
+### UI Error Handling
+```
+Loading States:
+- Skeleton loaders for content areas
+- Disabled states for interactive elements
+- Progress indicators for ongoing operations
+
+Error States:
+- Error messages for failed operations
+- Retry options where applicable
+- Graceful degradation of features
+```

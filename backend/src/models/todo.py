@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 import uuid
-from pydantic import field_validator
+from pydantic import field_validator, field_serializer
 
 # Handle circular import for relationship
 if TYPE_CHECKING:
@@ -15,6 +15,9 @@ class TodoBase(SQLModel):
     priority: str = Field(default="medium", nullable=False)  # enum: low, medium, high
     tags: str = Field(default="", nullable=False)  # comma-separated tags
     due_date: Optional[datetime] = Field(default=None)
+    # AI Integration Fields
+    ai_generated: bool = Field(default=False)  # indicates if todo was created via AI
+    ai_context: Optional[str] = Field(default=None, max_length=500)  # context from AI conversation
 
 class Todo(TodoBase, table=True):
     """
@@ -28,6 +31,7 @@ class Todo(TodoBase, table=True):
     # Relationship to user
     user: "User" = Relationship(back_populates="todos")
 
+
 class TodoCreate(TodoBase):
     """
     Schema for creating a new todo.
@@ -35,6 +39,8 @@ class TodoCreate(TodoBase):
     title: str = Field(min_length=1, max_length=255)
     priority: Optional[str] = Field(default="medium", max_length=20)  # enum: low, medium, high
     tags: Optional[str] = Field(default="", max_length=500)  # comma-separated tags
+    ai_generated: bool = Field(default=False)  # indicates if todo was created via AI
+    ai_context: Optional[str] = Field(default=None, max_length=500)  # context from AI conversation
 
     @field_validator('priority')
     def validate_priority(cls, value):
@@ -65,6 +71,13 @@ class TodoRead(TodoBase):
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer('priority')
+    def serialize_priority(self, value: Optional[str]) -> str:
+        # If priority is None, return default "medium"
+        if value is None:
+            return "medium"
+        return value
+
 class TodoUpdate(SQLModel):
     """
     Schema for updating todo information.
@@ -75,6 +88,8 @@ class TodoUpdate(SQLModel):
     priority: Optional[str] = None
     tags: Optional[str] = None
     due_date: Optional[datetime] = None
+    ai_generated: Optional[bool] = None
+    ai_context: Optional[str] = None
 
     @field_validator('priority')
     def validate_priority(cls, value):
