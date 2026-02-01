@@ -2,14 +2,14 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ReactNode } from 'react';
-import Footer from '../components/Footer';
+import { Footer } from '../components/ui/Footer';
 import { AuthProvider } from '../utils/auth';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Todo App - Organize Your Life',
-  description: 'A powerful todo app with priorities, tags, and smart filtering',
+  title: 'Todo+AI - Transform Your Productivity',
+  description: 'AI-powered task management with intelligent assistance',
 };
 
 export default function RootLayout({
@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen flex flex-col bg-gradient-to-br from-brand-dark to-brand-darker">
             <main className="flex-grow">
               {children}
             </main>
