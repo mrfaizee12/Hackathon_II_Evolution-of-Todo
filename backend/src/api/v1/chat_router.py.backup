@@ -1,0 +1,702 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session
+from typing import Dict, Any, Optional
+from datetime import datetime
+import uuid
+import json
+import re
+from pydantic import BaseModel
+
+from ...database.database import get_session
+from ...database.config import settings
+from ...middleware.auth import get_current_user
+from ...models.user import User
+from ...services.ai_conversation_service import AIConversationService
+from ...tools.todo_tools import (
+    add_task, list_tasks, update_task, complete_task, delete_task, get_all_tasks, mark_task_done,
+    AddTaskInput, ListTasksInput, UpdateTaskInput, CompleteTaskInput, DeleteTaskInput
+)
+from ...tools.user_tools import get_user_identity, GetUserIdentityInput
+
+
+def convert_position_to_uuid(arguments: Dict, last_displayed_tasks: list) -> Dict:
+    """
+    Convert position numbers (1, 2, 3...) to actual UUIDs based on the last displayed tasks.
+    If task_id contains a number, try to map it to the corresponding UUID in the last displayed tasks.
+    """
+    if 'task_id' in arguments and isinstance(arguments['task_id'], str):
+        task_id_str = arguments['task_id'].strip()
+
+        # Check if the task_id is a number (position)
+        if task_id_str.isdigit():
+            position = int(task_id_str)
+
+            # Adjust for 1-based indexing (users say "task 1" for first task)
+            if 1 <= position <= len(last_displayed_tasks):
+                actual_task = last_displayed_tasks[position - 1]
+                arguments['task_id'] = actual_task['id']
+                print(f"Converted position {position} to UUID {actual_task['id']}")
+
+    return arguments
+
+# Import OpenAI-compatible client for OpenRouter
+from openai import OpenAI
+
+class ChatRequest(BaseModel):
+    message: str
+    conversation_id: Optional[str] = None
+
+
+router = APIRouter()
+
+# Initialize OpenAI client with OpenRouter configuration
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=settings.openrouter_api_key
+)
+
+
+@router.post("/send")
+async def chat_with_ai(
+    request: ChatRequest,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Send a message to the AI assistant and get a response.
+    Creates or continues a conversation with the AI assistant.
+    """
+    # Debug: print current user
+    print(f"Current user: {current_user}")
+    print(f"Current user ID: {current_user.id if current_user else None}")
+
+    # Use the authenticated user's ID directly
+    user_id = str(current_user.id)
+    message = request.message
+    conversation_id = request.conversation_id
+
+    # Track the last displayed tasks for position-to-UUID mapping
+    last_displayed_tasks = []
+
+    # Get or create conversation
+    ai_service = AIConversationService(session)
+    conv_uuid = None
+
+    if conversation_id:
+        try:
+            conv_uuid = uuid.UUID(conversation_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid conversation ID format"
+            )
+
+        conversation = ai_service.get_conversation_by_id(conv_uuid)
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+    else:
+        # Create a new conversation
+        conversation = ai_service.create_conversation(
+            user_id=current_user.id,
+            title=f"AI Chat - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
+        conv_uuid = conversation.id
+
+    # Add user message to conversation (don't commit yet - wait for full transaction)
+    user_message = ai_service.add_message_to_conversation(
+        conversation_id=conv_uuid,
+        sender_type="USER",
+        content=message,
+        message_type="TEXT",
+        commit=False
+    )
+
+    # Prepare tools for the AI agent
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "add_task",
+                "description": "Add a new task to the user's todo list",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string", "description": "The title of the task"},
+                        "description": {"type": "string", "description": "Optional description of the task"},
+                        "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "Priority level"},
+                        "tags": {"type": "string", "description": "Comma-separated tags for the task"},
+                        "due_date": {"type": "string", "description": "ISO format date string for due date"},
+                        "ai_context": {"type": "string", "description": "Context for AI-generated task"}
+                    },
+                    "required": ["title"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_all_tasks",
+                "description": "Get all tasks from the user's todo list",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_tasks",
+                "description": "List tasks from the user's todo list with optional filtering",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "string", "enum": ["all", "pending", "completed"], "description": "Filter by completion status"},
+                        "limit": {"type": "integer", "description": "Maximum number of tasks to return"},
+                        "offset": {"type": "integer", "description": "Number of tasks to skip"}
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "update_task",
+                "description": "Update an existing task in the user's todo list",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "title": {"type": "string", "description": "New title for the task"},
+                        "description": {"type": "string", "description": "New description for the task"},
+                        "completed": {"type": "boolean", "description": "Whether the task is completed"},
+                        "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "New priority level"},
+                        "tags": {"type": "string", "description": "New comma-separated tags for the task"},
+                        "due_date": {"type": "string", "description": "New ISO format date string for due date"},
+                        "ai_context": {"type": "string", "description": "Context for AI-assisted update"}
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "delete_task",
+                "description": "Delete a task from the user's todo list",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to delete"}
+                    },
+                    "required": ["task_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "mark_task_done",
+                "description": "Mark a task as completed/done",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to mark as done"}
+                    },
+                    "required": ["task_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_user_identity",
+                "description": "Get user identity information",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": {"type": "string", "description": "The ID of the user to get information for"}
+                    },
+                    "required": ["user_id"]
+                }
+            }
+        }
+    ]
+
+    try:
+        # Initial call to the AI model with tools
+        messages = [
+            {"role": "system", "content": "You are a database operator. When you see a command like 'Update' or 'Delete', your ONLY priority is to call the appropriate tool with the correct UUID. You must execute tools immediately when the user gives a command.\n\nDATABASE OPERATIONS:\n- If user says 'Update task N' or 'Change task N', use the 'update_task' tool with the UUID of the Nth task from the last list\n- If user says 'Delete task N', use the 'delete_task' tool with the UUID of the Nth task from the last list\n- If user says 'Complete task N', 'Mark task N done', 'Mark task N completed', or 'Mark task N finished', use the 'mark_task_done' tool with the UUID of the Nth task from the last list\n- If user says 'List tasks', 'Show tasks', 'Show all tasks', or 'Show my tasks', use the 'get_all_tasks' tool (returns FULL list)\n- If user wants to add a task, use the 'add_task' tool\n\nTOOL EXECUTION RULES:\n- You MUST call EXACTLY ONE tool per user message\n- You CANNOT just repeat the list without calling tools\n- You MUST convert user-friendly positions (1, 2, 3) to real UUIDs\n- You MUST execute the database operation\n- You MUST respond with the result of the tool execution\n- You MUST NOT call multiple tools per message\n- You MUST NOT include internal reasoning in your response\n- You MUST return the full task list when requested, not a summary"},
+            {"role": "user", "content": message}
+        ]
+
+        response = client.chat.completions.create(
+            model="xiaomi/mimo-v2-flash:free",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            extra_headers={
+                "HTTP-Referer": "http://localhost:3000",  # Optional but recommended by OpenRouter
+                "X-Title": "Todo Chatbot",
+            }
+        )
+
+        # Process the response
+        ai_response = ""
+        tool_calls_results = []
+
+        # Check if the response includes tool calls
+        if hasattr(response.choices[0].message, 'tool_calls') and response.choices[0].message.tool_calls:
+            # Process ONLY THE FIRST tool call and ignore additional ones to enforce one tool per message
+            first_tool_call = response.choices[0].message.tool_calls[0]  # Take only the first tool call
+            tool_responses = []
+
+            function_name = first_tool_call.function.name
+            try:
+                arguments = json.loads(first_tool_call.function.arguments)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, return an error
+                result = {"success": False, "message": f"Error parsing arguments for {function_name}"}
+
+                # Append tool response to messages for AI to see
+                tool_responses.append({
+                    "role": "tool",
+                    "content": json.dumps(result),
+                    "tool_call_id": first_tool_call.id
+                })
+
+                tool_calls_results.append({
+                    "function_name": function_name,
+                    "arguments": {},
+                    "result": result
+                })
+            else:
+                # Execute the actual function using the todo service
+                try:
+                    print(f"Executing tool: {function_name} with params: {arguments}")
+
+                    if function_name == "add_task":
+                        input_data = AddTaskInput(**arguments)
+                        result = add_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+                        if result.get("success") and "task_id" in result:
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_id = result["task_id"]
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+
+                    elif function_name == "get_all_tasks":
+                        result = get_all_tasks(str(current_user.id), session)
+                        # Store the tasks for position-to-UUID mapping
+                        if result.get("success") and "tasks" in result:
+                            last_displayed_tasks = result["tasks"]
+
+                    elif function_name == "list_tasks":
+                        input_data = ListTasksInput(**arguments)
+                        result = list_tasks(input_data, str(current_user.id), session)
+                        # Store the tasks for position-to-UUID mapping
+                        if result.get("success") and "tasks" in result:
+                            last_displayed_tasks = result["tasks"]
+
+                    elif function_name == "update_task":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        input_data = UpdateTaskInput(**converted_arguments)
+                        result = update_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+                        if result.get("success") and "task_id" in result:
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_id = result["task_id"]
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+
+                    elif function_name == "delete_task":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        input_data = DeleteTaskInput(**converted_arguments)
+                        result = delete_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+
+                    elif function_name == "mark_task_done":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        task_id = converted_arguments.get("task_id")
+                        if task_id:
+                            result = mark_task_done(task_id, str(current_user.id), session)
+
+                            # Refresh the session to ensure changes are persisted
+                            session.commit()
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+                        else:
+                            result = {"success": False, "message": "Missing task_id parameter for mark_task_done"}
+
+                    elif function_name == "get_user_identity":
+                        # Use the authenticated user's ID directly, not from AI arguments
+                        # This prevents the AI from guessing or providing an incorrect user ID
+                        input_data = GetUserIdentityInput(user_id=str(current_user.id))
+                        result = get_user_identity(input_data, session)
+
+                    else:
+                        result = {"success": False, "message": f"Unknown function: {function_name}"}
+
+                    # Ensure transaction is committed for all operations
+                    session.commit()
+
+                    print(f"Tool execution result: {result}")
+
+                except Exception as e:
+                    # Rollback on error to clear failed transaction
+                    session.rollback()
+                    result = {"success": False, "message": f"Database error in {function_name}: {str(e)}"}
+                    print(f"Database error in {function_name}: {str(e)}")
+
+                # Store the result for final response formatting
+                tool_calls_results.append({
+                    "function_name": function_name,
+                    "arguments": arguments,
+                    "result": result
+                })
+
+                # Append tool response to messages for AI to see
+                tool_responses.append({
+                    "role": "tool",
+                    "content": json.dumps(result),
+                    "tool_call_id": first_tool_call.id  # This should match the id of the tool call
+                })
+
+                # Execute the actual function using the todo service
+                try:
+                    print(f"Executing tool: {function_name} with params: {arguments}")
+
+                    if function_name == "add_task":
+                        input_data = AddTaskInput(**arguments)
+                        result = add_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+                        if result.get("success") and "task_id" in result:
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_id = result["task_id"]
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+
+                    elif function_name == "get_all_tasks":
+                        result = get_all_tasks(str(current_user.id), session)
+                        # Store the tasks for position-to-UUID mapping
+                        if result.get("success") and "tasks" in result:
+                            last_displayed_tasks = result["tasks"]
+
+                    elif function_name == "list_tasks":
+                        input_data = ListTasksInput(**arguments)
+                        result = list_tasks(input_data, str(current_user.id), session)
+                        # Store the tasks for position-to-UUID mapping
+                        if result.get("success") and "tasks" in result:
+                            last_displayed_tasks = result["tasks"]
+
+                    elif function_name == "update_task":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        input_data = UpdateTaskInput(**converted_arguments)
+                        result = update_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+                        if result.get("success") and "task_id" in result:
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_id = result["task_id"]
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+
+                    elif function_name == "delete_task":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        input_data = DeleteTaskInput(**converted_arguments)
+                        result = delete_task(input_data, str(current_user.id), session)
+
+                        # Refresh the session to ensure changes are persisted
+                        session.commit()
+
+                    elif function_name == "mark_task_done":
+                        # Convert position to UUID if needed
+                        converted_arguments = convert_position_to_uuid(arguments.copy(), last_displayed_tasks)
+                        task_id = converted_arguments.get("task_id")
+                        if task_id:
+                            result = mark_task_done(task_id, str(current_user.id), session)
+
+                            # Refresh the session to ensure changes are persisted
+                            session.commit()
+                            # Refresh the specific todo if we have its ID
+                            from ..models.todo import Todo
+                            task_obj = session.get(Todo, task_id)
+                            if task_obj:
+                                session.refresh(task_obj)
+                        else:
+                            result = {"success": False, "message": "Missing task_id parameter for mark_task_done"}
+
+                    elif function_name == "get_user_identity":
+                        # Use the authenticated user's ID directly, not from AI arguments
+                        # This prevents the AI from guessing or providing an incorrect user ID
+                        input_data = GetUserIdentityInput(user_id=str(current_user.id))
+                        result = get_user_identity(input_data, session)
+
+                    else:
+                        result = {"success": False, "message": f"Unknown function: {function_name}"}
+
+                    # Ensure transaction is committed for all operations
+                    session.commit()
+
+                    print(f"Tool execution result: {result}")
+
+                except Exception as e:
+                    # Rollback on error to clear failed transaction
+                    session.rollback()
+                    result = {"success": False, "message": f"Database error in {function_name}: {str(e)}"}
+                    print(f"Database error in {function_name}: {str(e)}")
+
+                # Store the result for final response formatting
+                tool_calls_results.append({
+                    "function_name": function_name,
+                    "arguments": arguments,
+                    "result": result
+                })
+
+                # Append tool response to messages for AI to see
+                tool_responses.append({
+                    "role": "tool",
+                    "content": json.dumps(result),
+                    "tool_call_id": tool_call.id  # This should match the id of the tool call
+                })
+
+            # Create new messages list for second AI call with tool responses
+            second_messages = [
+                {"role": "system", "content": "You are a database operator. When you see a command like 'Update' or 'Delete', your ONLY priority is to call the appropriate tool with the correct UUID. You must execute tools immediately when the user gives a command.\n\nDATABASE OPERATIONS:\n- If user says 'Update task N' or 'Change task N', use the 'update_task' tool with the UUID of the Nth task from the last list\n- If user says 'Delete task N', use the 'delete_task' tool with the UUID of the Nth task from the last list\n- If user says 'Complete task N', 'Mark task N done', 'Mark task N completed', or 'Mark task N finished', use the 'mark_task_done' tool with the UUID of the Nth task from the last list\n- If user says 'List tasks', 'Show tasks', 'Show all tasks', or 'Show my tasks', use the 'get_all_tasks' tool (returns FULL list)\n- If user wants to add a task, use the 'add_task' tool\n\nTOOL EXECUTION RULES:\n- You MUST call EXACTLY ONE tool per user message\n- You CANNOT just repeat the list without calling tools\n- You MUST convert user-friendly positions (1, 2, 3) to real UUIDs\n- You MUST execute the database operation\n- You MUST respond with the result of the tool execution\n- You MUST NOT call multiple tools per message\n- You MUST NOT include internal reasoning in your response\n- You MUST return the full task list when requested, not a summary"},
+                {"role": "user", "content": message}
+            ]
+
+            # Add the original assistant message that triggered the tool calls
+            second_messages.append({
+                "role": "assistant",
+                "content": response.choices[0].message.content,
+                "tool_calls": response.choices[0].message.tool_calls
+            })
+
+            # Add the tool responses so the AI can see the results
+            second_messages.extend(tool_responses)
+
+            # Call the AI again to get the final formatted response based on tool results
+            final_response = client.chat.completions.create(
+                model="xiaomi/mimo-v2-flash:free",
+                messages=second_messages,
+                tools=tools,
+                extra_headers={
+                    "HTTP-Referer": "http://localhost:3000",  # Optional but recommended by OpenRouter
+                    "X-Title": "Todo Chatbot",
+                }
+            )
+
+            # Get the final response from the AI after processing tool results
+            ai_response = final_response.choices[0].message.content or "Operation completed."
+        else:
+            # If no tool calls, just return the content
+            ai_response = response.choices[0].message.content or "I'm here to help you manage your todos!"
+
+        # Clean up any internal reasoning/thought tags from the response
+        import re
+        # Remove content between <thought>...</thought> tags
+        ai_response = re.sub(r'<thought>.*?</thought>', '', ai_response, flags=re.DOTALL)
+        # Remove content between <reasoning>...</reasoning> tags
+        ai_response = re.sub(r'<reasoning>.*?</reasoning>', '', ai_response, flags=re.DOTALL)
+        # Remove content between <analysis>...</analysis> tags
+        ai_response = re.sub(r'<analysis>.*?</analysis>', '', ai_response, flags=re.DOTALL)
+        # Remove content between <internal_thought>...</internal_thought> tags
+        ai_response = re.sub(r'<internal_thought>.*?</internal_thought>', '', ai_response, flags=re.DOTALL)
+        # Remove content between <reflection>...</reflection> tags
+        ai_response = re.sub(r'<reflection>.*?</reflection>', '', ai_response, flags=re.DOTALL)
+        # Remove any remaining tags that might contain internal reasoning
+        ai_response = re.sub(r'<[^>]*_thought[^>]*>.*?</[^>]*_thought[^>]*>', '', ai_response, flags=re.DOTALL)
+        # Remove content that looks like internal notes or analysis
+        ai_response = re.sub(r'\[.*?thinking.*?\]', '', ai_response, flags=re.IGNORECASE | re.DOTALL)
+        ai_response = re.sub(r'\[.*?reasoning.*?\]', '', ai_response, flags=re.IGNORECASE | re.DOTALL)
+        ai_response = re.sub(r'\[.*?analysis.*?\]', '', ai_response, flags=re.IGNORECASE | re.DOTALL)
+        # Strip any leading/trailing whitespace that might result from tag removal
+        ai_response = ai_response.strip()
+
+        # Extract only the final natural language response after any internal processing
+        # Look for the last substantial sentence or response after potential internal reasoning
+        response_lines = ai_response.split('\n')
+        final_response_parts = []
+        for line in response_lines:
+            stripped_line = line.strip()
+            if stripped_line and not stripped_line.startswith('<') and not stripped_line.startswith('['):
+                final_response_parts.append(stripped_line)
+
+        # Join the meaningful parts and take the last few sentences if there are multiple sections
+        if final_response_parts:
+            ai_response = ' '.join(final_response_parts[-3:])  # Take up to last 3 meaningful lines
+        else:
+            ai_response = "Operation completed."  # Fallback response
+
+        # Add AI response to conversation
+        try:
+            ai_message = ai_service.add_message_to_conversation(
+                conversation_id=conv_uuid,
+                sender_type="ASSISTANT",
+                content=ai_response,
+                message_type="TEXT",
+                commit=False  # Don't commit here, will commit at the end
+            )
+            # Commit the conversation message as part of the main transaction
+            session.commit()
+        except Exception as e:
+            # Rollback on error to clear failed transaction
+            session.rollback()
+            print(f"Error saving AI response to conversation: {str(e)}")
+
+        return {
+            "response": ai_response,
+            "conversation_id": str(conv_uuid),
+            "action_performed": len(tool_calls_results) > 0,
+            "tool_calls": tool_calls_results
+        }
+
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in AI chat: {str(e)}")
+
+        # Rollback any failed transactions
+        try:
+            session.rollback()
+        except:
+            pass  # Ignore rollback errors
+
+        # Add error message to conversation
+        try:
+            error_message = ai_service.add_message_to_conversation(
+                conversation_id=conv_uuid,
+                sender_type="ASSISTANT",
+                content="Sorry, I encountered an error processing your request. Please try again.",
+                message_type="SYSTEM",
+                commit=False  # Don't commit here, will commit at the end
+            )
+            session.commit()
+        except Exception as conversation_error:
+            # If we can't save the error message, at least rollback
+            try:
+                session.rollback()
+            except:
+                pass
+            print(f"Error saving error message to conversation: {str(conversation_error)}")
+
+        return {
+            "response": "Sorry, I encountered an error processing your request. Please try again.",
+            "conversation_id": str(conv_uuid),
+            "action_performed": False,
+            "error": str(e)
+        }
+
+
+@router.get("/conversations/{user_id}")
+async def get_user_conversations(
+    user_id: str,
+    limit: int = 10,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all conversations for a user.
+    """
+    if str(current_user.id) != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this conversation"
+        )
+
+    ai_service = AIConversationService(session)
+    conversations = ai_service.get_conversations_by_user(
+        user_id=current_user.id,
+        limit=limit,
+        offset=offset
+    )
+
+    return {
+        "conversations": [
+            {
+                "id": str(conv.id),
+                "title": conv.title,
+                "created_at": conv.created_at.isoformat(),
+                "updated_at": conv.updated_at.isoformat(),
+                "is_active": conv.is_active
+            } for conv in conversations
+        ],
+        "total": len(conversations)
+    }
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: str,
+    limit: int = 50,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get messages from a specific conversation.
+    """
+    try:
+        conv_uuid = uuid.UUID(conversation_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid conversation ID format"
+        )
+
+    ai_service = AIConversationService(session)
+    conversation = ai_service.get_conversation_by_id(conv_uuid)
+
+    if not conversation or str(conversation.user_id) != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found or not authorized"
+        )
+
+    messages = ai_service.get_messages_by_conversation(
+        conversation_id=conv_uuid,
+        limit=limit,
+        offset=offset
+    )
+
+    return {
+        "messages": [
+            {
+                "id": str(msg.id),
+                "sender_type": msg.sender_type,
+                "content": msg.content,
+                "message_type": msg.message_type,
+                "created_at": msg.created_at.isoformat(),
+                "metadata": msg.extra_metadata
+            } for msg in messages
+        ],
+        "total": len(messages)
+    }

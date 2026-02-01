@@ -1,45 +1,44 @@
-# Implementation Plan: Phase II INTERMEDIATE - Todo Organization & Usability Enhancement
+# Implementation Plan: [FEATURE]
 
-**Branch**: `001-phase-ii-intermediate` | **Date**: 2026-01-05 | **Spec**: [link to spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-phase-ii-intermediate/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/sp.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
-This plan implements Phase II Intermediate features by extending the existing FastAPI backend and Next.js frontend with priority management, tagging, search, filtering, and due date capabilities. The implementation preserves all existing Phase II Basic functionality while adding intermediate-level organization features as specified. The approach includes extending the SQLModel schema, enhancing API endpoints with query parameters, and updating the UI with new controls and enhanced display elements.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: Python 3.11 (Backend), TypeScript 5+ (Frontend), Node.js 18+
-**Primary Dependencies**: FastAPI (Backend), Next.js 14+ (Frontend), SQLModel, Neon Serverless PostgreSQL, Better Auth
-**Storage**: Neon Serverless PostgreSQL with SQLModel ORM
-**Testing**: pytest (Backend), Jest/React Testing Library (Frontend)
-**Target Platform**: Web application (Full-stack)
-**Project Type**: Web application (backend + frontend)
-**Performance Goals**: <200ms API response time for search/filter operations, <2s UI response for search results
-**Constraints**: Must maintain backward compatibility with existing functionality, follow 12-factor app principles, implement proper authentication/authorization
-**Scale/Scope**: Support 100+ todos per user with efficient filtering and search capabilities
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- ✅ **Spec-Driven Development**: Plan follows constitution requirement (Constitution I) - implementing from approved spec
-- ✅ **Phase Isolation**: Implementation extends Phase II Basic without breaking existing functionality (Constitution III) - additive changes only
-- ✅ **Technology Stack**: Uses authorized technologies (FastAPI, SQLModel, Neon PostgreSQL, Next.js, Better Auth) per Constitution IV
-- ✅ **No Breaking Changes**: Plan preserves all existing Phase II Basic functionality (Constitution III)
-- ✅ **Quality Principles**: Follows Clean Architecture, security guidelines, and performance requirements (Constitution V)
-- ✅ **UI/UX Requirements**: Implements modern UI with gradient themes and animations as required (Constitution V)
-
-**Post-Design Constitution Check**: All requirements continue to be met after Phase 1 design completion. The implemented architecture, data models, and API contracts fully comply with constitutional requirements.
+[Gates determined based on constitution file]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/001-phase-ii-intermediate/
+specs/[###-feature]/
 ├── plan.md              # This file (/sp.plan command output)
 ├── research.md          # Phase 0 output (/sp.plan command)
 ├── data-model.md        # Phase 1 output (/sp.plan command)
@@ -49,52 +48,51 @@ specs/001-phase-ii-intermediate/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
 │   ├── models/
-│   │   └── todo.py              # Extended Todo model with priority, tags, due_date
 │   ├── services/
-│   │   └── todo_service.py      # Enhanced todo service with search/filter logic
 │   └── api/
-│       └── todo_router.py       # Extended API endpoints with query parameters
-├── tests/
-│   ├── unit/
-│   └── integration/
-└── requirements.txt
+└── tests/
 
 frontend/
 ├── src/
 │   ├── components/
-│   │   ├── TodoForm.tsx         # Enhanced form with priority, tags, due date inputs
-│   │   ├── TodoItem.tsx         # Enhanced display with priority indicators, tags, due dates
-│   │   ├── TodoFilters.tsx      # New component for filtering controls
-│   │   └── SearchBar.tsx        # New component for search functionality
 │   ├── pages/
-│   │   └── dashboard/
-│   │       └── index.tsx        # Enhanced todo list page
 │   └── services/
-│       └── api.ts               # Updated API service with query parameter support
-├── tests/
-│   ├── unit/
-│   └── integration/
-└── package.json
+└── tests/
 
-# Landing page and public UI enhancements
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx             # Landing page with hero section
-│   │   ├── layout.tsx           # Main layout with footer
-│   │   └── components/
-│   │       ├── HeroSection.tsx  # Hero section component
-│   │       └── Footer.tsx       # Footer component
-└── public/
-    └── images/                  # Public assets
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Selected web application structure with separate backend and frontend directories to maintain clear separation of concerns as required by Clean Architecture principles in the constitution.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
@@ -102,4 +100,5 @@ frontend/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| N/A | N/A | N/A |
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

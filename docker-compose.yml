@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8007:8007"
+    env_file:
+      - .env  # Yeh line aapki keys ko .env se utha legi
+    networks:
+      - todo-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8007
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8007
+    networks:
+      - todo-net
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  todo-net:
+    driver: bridge
