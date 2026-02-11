@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-platform.fullname" . }}-todo-service
+  labels:
+    {{- include "todo-platform.labels" . | nindent 4 }}
+    app: todo-service
+spec:
+  replicas: {{ .Values.todoService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "todo-platform.selectorLabels" . | nindent 6 }}
+      app: todo-service
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "todo-service"
+        dapr.io/app-port: "8001"
+        dapr.io/config: "dapr-config"
+      labels:
+        {{- include "todo-platform.selectorLabels" . | nindent 8 }}
+        app: todo-service
+    spec:
+      containers:
+        - name: todo-service
+          image: "{{ .Values.todoService.image.repository }}:{{ .Values.todoService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.todoService.image.pullPolicy }}
+          ports:
+            - containerPort: 8001
+          env:
+            - name: SERVICE_NAME
+              value: "todo-service"
+            - name: PORT
+              value: "8001"
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: database-url
+            - name: EVENT_BUS_TYPE
+              value: {{ .Values.eventBus.type | quote }}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: secret-key
+            - name: ALGORITHM
+              value: "HS256"
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              value: "30"
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: openrouter-api-key
+          resources:
+            {{- toYaml .Values.todoService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-service
+  labels:
+    {{- include "todo-platform.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.todoService.service.port }}
+      targetPort: 8001
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-platform.selectorLabels" . | nindent 4 }}
+    app: todo-service

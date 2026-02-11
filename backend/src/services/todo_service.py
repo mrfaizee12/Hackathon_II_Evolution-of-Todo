@@ -1,15 +1,17 @@
 from sqlmodel import Session, select
 from typing import List, Optional
 from fastapi import HTTPException, status
-from datetime import datetime
-
-from ..models.todo import Todo, TodoCreate, TodoUpdate, TodoPatchStatus
+from datetime import datetime, timedelta
+from ..models.todo import Todo, TodoCreate, TodoUpdate, TodoPatchStatus, RecurrenceType
 from ..models.user import User
-
+from ..events.publisher import EventPublisher, InMemoryEventPublisher # Assuming InMemoryEventPublisher for now
+from ..events.todo_events import TaskCompletedEvent
+from ..utils.datetime_utils import get_utc_now, calculate_next_occurrence
 
 class TodoService:
-    def __init__(self, session: Session = None):
+    def __init__(self, session: Session = None, event_publisher: EventPublisher = None):
         self.session = session
+        self.event_publisher = event_publisher if event_publisher else InMemoryEventPublisher() # Default to in-memory
 
     def create_todo(self, session: Session, user_id: str, todo_create: TodoCreate) -> Todo:
         """
@@ -21,7 +23,6 @@ class TodoService:
             tag_list = [tag.strip() for tag in todo_create.tags.split(',') if tag.strip()]
             processed_tags = ",".join(tag_list)
 
-        # Create the todo with the user_id
         # Ensure priority is never None when creating
         priority_value = todo_create.priority
         if priority_value is None:
@@ -34,6 +35,10 @@ class TodoService:
             priority=priority_value,
             tags=processed_tags,
             due_date=todo_create.due_date,
+            recurrence_type=todo_create.recurrence_type,
+            recurrence_interval=todo_create.recurrence_interval,
+            next_occurrence=todo_create.next_occurrence,
+            reminder_at=todo_create.reminder_at,
             ai_generated=todo_create.ai_generated if hasattr(todo_create, 'ai_generated') else False,
             ai_context=todo_create.ai_context if hasattr(todo_create, 'ai_context') else None,
             user_id=user_id
@@ -138,14 +143,15 @@ class TodoService:
             todo.tags = processed_tags
 
         # Update only the other fields that are provided
-        update_data = todo_update.dict(exclude_unset=True)
+        update_data = todo_update.model_dump(exclude_unset=True) # Use model_dump for Pydantic V2
         for field, value in update_data.items():
-            if field != 'tags':  # Skip tags since we handled it separately
-                # Handle AI fields if they exist in the update data
-                if field in ['ai_generated', 'ai_context']:
-                    setattr(todo, field, value)
-                elif hasattr(todo, field):  # Only set attributes that exist on the todo object
-                    setattr(todo, field, value)
+            if field == 'tags':  # Skip tags since we handled it separately
+                continue
+            # Handle advanced fields
+            if field in ['due_date', 'recurrence_type', 'recurrence_interval', 'next_occurrence', 'reminder_at', 'ai_generated', 'ai_context']:
+                setattr(todo, field, value)
+            elif hasattr(todo, field):  # Only set attributes that exist on the todo object
+                setattr(todo, field, value)
 
         session.add(todo)
         session.commit()
@@ -174,20 +180,58 @@ class TodoService:
     def update_todo_status(self, session: Session, todo_id: str, user_id: str, status_update: TodoPatchStatus) -> Optional[Todo]:
         """
         Update the completion status of a specific todo if it belongs to the user.
+        If a recurring task is completed, generate the next occurrence.
         """
-        # First verify the task belongs to the user
         todo = self.get_todo_by_id_and_user(session, todo_id, user_id)
         if not todo:
             return None
 
+        previous_completed_status = todo.completed
         todo.completed = status_update.completed
-
         session.add(todo)
         session.commit()
         session.refresh(todo)
+
+        # If a recurring task is marked completed and it was previously not completed
+        if not previous_completed_status and todo.completed and todo.recurrence_type != RecurrenceType.NONE:
+            self.event_publisher.publish(
+                "task.completed",
+                TaskCompletedEvent(
+                    task_id=todo.id,
+                    user_id=todo.user_id,
+                    completed_at=get_utc_now(),
+                    recurrence_type=todo.recurrence_type.value
+                ).model_dump()
+            )
+            print(f"Published TaskCompletedEvent for recurring task {todo.id}")
 
         # Ensure priority is never None for API responses
         if todo.priority is None:
             todo.priority = "medium"
 
         return todo
+
+    def get_upcoming_tasks(
+        self,
+        session: Session,
+        user_id: str,
+        days_ahead: int = 7,
+        include_overdue: bool = False
+    ) -> List[Todo]:
+        """
+        Get tasks with due dates in the upcoming days, optionally including overdue tasks.
+        """
+        now_utc = get_utc_now()
+        target_date = now_utc + timedelta(days=days_ahead)
+
+        statement = select(Todo).where(Todo.user_id == user_id)
+
+        if not include_overdue:
+            statement = statement.where(Todo.due_date >= now_utc)
+
+        statement = statement.where(Todo.due_date <= target_date)
+        statement = statement.where(Todo.completed == False) # Only include incomplete tasks
+        statement = statement.order_by(Todo.due_date.asc())
+
+        upcoming_todos = session.exec(statement).all()
+        return upcoming_todos

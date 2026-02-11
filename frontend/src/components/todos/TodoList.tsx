@@ -3,16 +3,8 @@
 import React, { useState } from 'react';
 import EditTodo from './EditTodo';
 import Notification from '../Notification';
-
-interface Todo {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Todo } from '../../services/api';
+import { isRecurring, isDueSoon, hasReminder, isOverdue, formatDateForDisplay } from '../../utils/taskUtils';
 
 interface TodoListProps {
   todos: Todo[];
@@ -111,11 +103,37 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onUpdateTodo, onToggleTodo, 
                       {todo.description}
                     </p>
                   )}
-                  <div className="flex items-center mt-3 text-xs text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Created: {new Date(todo.created_at).toLocaleString()}</span>
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <div className="flex items-center text-xs text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Created: {new Date(todo.created_at).toLocaleString()}</span>
+                    </div>
+                    
+                    {/* Badges for advanced features */}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {isRecurring(todo) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          🔁 Recurring
+                        </span>
+                      )}
+                      
+                      {todo.due_date && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          isOverdue(todo) ? 'bg-red-100 text-red-800' : 
+                          isDueSoon(todo) ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          📅 {isOverdue(todo) ? 'Overdue' : isDueSoon(todo) ? 'Due Soon' : `Due: ${formatDateForDisplay(todo.due_date)}`}
+                        </span>
+                      )}
+                      
+                      {hasReminder(todo) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                          🔔 Reminder Set
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex space-x-2 ml-4">

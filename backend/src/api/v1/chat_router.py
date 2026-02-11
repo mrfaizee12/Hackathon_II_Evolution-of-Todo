@@ -14,7 +14,9 @@ from ...models.user import User
 from ...services.ai_conversation_service import AIConversationService
 from ...tools.todo_tools import (
     add_task, list_tasks, update_task, complete_task, delete_task, get_all_tasks,
-    AddTaskInput, ListTasksInput, UpdateTaskInput, CompleteTaskInput, DeleteTaskInput
+    set_task_recurrence, remove_task_recurrence, set_task_due_date, set_task_reminder, list_upcoming_tasks,
+    AddTaskInput, ListTasksInput, UpdateTaskInput, CompleteTaskInput, DeleteTaskInput,
+    SetRecurrenceInput, RemoveRecurrenceInput, SetDueDateInput, SetReminderInput, ListUpcomingTasksInput
 )
 from ...tools.user_tools import get_user_identity, GetUserIdentityInput
 from ...services.openrouter_service import OpenRouterService
@@ -121,7 +123,7 @@ async def chat_with_ai(
         conv_uuid = conversation.id
 
     # State is maintained in database - no conversation-specific state in memory
-    # We'll determine active intent based on conversation context from database if needed
+    # We'll determine active intent based on conversation context from database when needed
     # For now, initialize as none for stateless operation
     active_intent = "none"
     pending_task_id = ""
@@ -150,6 +152,8 @@ async def chat_with_ai(
                         "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "Priority level"},
                         "tags": {"type": "string", "description": "Comma-separated tags for the task"},
                         "due_date": {"type": "string", "description": "ISO format date string for due date"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"},
                         "ai_context": {"type": "string", "description": "Context for AI-generated task"}
                     },
                     "required": ["title"]
@@ -197,6 +201,8 @@ async def chat_with_ai(
                         "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "New priority level"},
                         "tags": {"type": "string", "description": "New comma-separated tags for the task"},
                         "due_date": {"type": "string", "description": "New ISO format date string for due date"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"},
                         "ai_context": {"type": "string", "description": "Context for AI-assisted update"}
                     }
                 }
@@ -233,6 +239,80 @@ async def chat_with_ai(
         {
             "type": "function",
             "function": {
+                "name": "set_task_recurrence",
+                "description": "Set or update recurrence settings for a task",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"}
+                    },
+                    "required": ["task_id", "recurrence_type"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "remove_task_recurrence",
+                "description": "Remove recurrence settings from a task",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"}
+                    },
+                    "required": ["task_id"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "set_task_due_date",
+                "description": "Set or update the due date for a task",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "due_date": {"type": "string", "description": "ISO format date string for the new due date"}
+                    },
+                    "required": ["task_id", "due_date"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "set_task_reminder",
+                "description": "Set or update the reminder time for a task",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "reminder_at": {"type": "string", "description": "ISO format date string for when to send the reminder"}
+                    },
+                    "required": ["task_id", "reminder_at"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_upcoming_tasks",
+                "description": "List tasks with upcoming due dates for the user",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "days_ahead": {"type": "integer", "description": "Number of days to look ahead for due tasks (default 7)"},
+                        "include_overdue": {"type": "boolean", "description": "Whether to include overdue tasks (default false)"}
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "get_user_identity",
                 "description": "Get user identity information",
                 "parameters": {
@@ -257,10 +337,54 @@ async def chat_with_ai(
         if refresh_result.get("success") and "tasks" in refresh_result:
             last_displayed_tasks = refresh_result["tasks"]
 
+
     messages = [
-        {"role": "system", "content": "You are an action-oriented database operator specialized in executing user commands immediately. Follow these deterministic rules:\n\nINTENT + TASK NUMBER HANDLING:\n- When user says 'Delete task 3' or 'Update task 3', AUTO-FETCH task list if not in memory\n- RESOLVE position → UUID immediately in the SAME turn\n- EXECUTE action in the SAME turn\n- NEVER ask for task ID if task number is already provided\n\nTASK LIST MEMORY:\n- Always persist last_task_list in session memory\n- Never overwrite it unless refreshed\n- Auto-refresh when needed for position-to-UUID mapping\n\nSTATUS CHANGES:\n- Use complete_task ONLY for marking tasks done\n- Never call update_task just to mark completed\n\nUPDATE TASK BEHAVIOR:\n- NEVER call add_task when user intent is update\n- If update_task fails, ask user for missing fields (e.g. title)\n- DO NOT fallback to add_task under any condition\n- For partial updates (description, priority), fetch existing task data and send full payload (title + updated field)\n\nDELETE TASK BEHAVIOR:\n- After delete_task or complete_task: immediately refresh task list and update session memory before responding\n\nMEMORY RULES:\n- last_task_list must always reflect latest backend state\n- Never respond using stale task data\n\nSINGLE TASK QUERIES:\n- If user asks for 'task X description': resolve task X from last_task_list and read description from memory\n- Do NOT refuse if data already exists\n\nADD_TASK FLOW:\n- Store draft task details in memory when user provides incomplete info\n- Accept 'yes', 'do that', 'confirm' as confirmation for pending tasks\n- Normalize date formats automatically to YYYY-MM-DD\n\nEXECUTION RULES:\n- When user says 'update task 5 to change title to New Title', call update_task with task_id: UUID of task 5, title: 'New Title'\n- When user says 'add task Buy groceries', call add_task with title: 'Buy groceries'\n- When user says 'complete task 3', call complete_task with task_id: UUID of task 3\n- When user says 'delete task 2', call delete_task with task_id: UUID of task 2\n\nDATABASE OPERATIONS:\n- If user says 'Update task N' or 'Change task N', use the 'update_task' tool with the UUID of the Nth task\n- If user says 'Delete task N', use the 'delete_task' tool with the UUID of the Nth task\n- If user says 'Complete task N', 'Mark task N done', 'Mark task N completed', or 'Mark task N finished', use the 'complete_task' tool with the UUID of the Nth task\n- If user says 'List tasks', 'Show tasks', 'Show all tasks', or 'Show my tasks', use the 'get_all_tasks' tool\n- If user wants to add a task, use the 'add_task' tool\n- If user asks 'who am I', use the 'get_user_identity' tool\n\nTOOL EXECUTION RULES:\n- You MUST call EXACTLY ONE tool per user message\n- You CANNOT just repeat the list without calling tools\n- You MUST convert user-friendly positions (1, 2, 3) to real UUIDs\n- You MUST execute the database operation\n- You MUST respond with the result of the tool execution\n- You MUST NOT call multiple tools per message\n- You MUST NOT include internal reasoning in your response\n- You MUST return the full task list when requested, not a summary\n- TASK LIST DISPLAY FORMAT: Show tasks as numbered list like: 1) Title — Completed/Pending\n\nINVALID INTENTS HANDLING:\n- If user asks for an unsupported action (e.g. 'remove pending', 'show completed only', etc.), explicitly explain what actions ARE allowed\n- Allowed actions: add_task, get_all_tasks, list_tasks, update_task, delete_task, complete_task, get_user_identity\n- Say: 'I can help you with the following actions: add a new task, list all tasks, update an existing task, delete a task, mark a task as completed, or show your user identity.'\n- DO NOT silently ignore unsupported requests\n- DO NOT just show a task list when the request is invalid\n- DO NOT pretend the unsupported action worked\n\nRESPONSE RULES:\n- After any update, delete, or complete operation, ALWAYS show the updated task list to the user\n- After adding a task, always confirm the task was added and show the updated list\n- Always provide specific information about what changed, not generic responses\n- Use conversational language like 'I've updated task #3 for you!' or 'Task has been removed from your list!'\n- Show the complete updated task list after operations so the user knows the current state\n\nACTION-FIRST BEHAVIOR:\n- Be deterministic and action-oriented\n- Not conversationally fragile\n- Execute immediately when intent is clear\n- Never ask for clarification about intent if it's clear from the message"},
+        {"role": "system", "content": """You are an action-oriented database operator specialized in executing user commands immediately. Follow these deterministic rules:
+
+INTENT + TASK NUMBER HANDLING:
+- When user says 'Delete task 3' or 'Update task 3', AUTO-FETCH task list if not in memory
+- RESOLVE position → UUID immediately in the SAME turn
+- EXECUTE action in the SAME turn
+- NEVER ask for task ID if task number is already provided
+
+TASK LIST MEMORY:
+- Always persist last_task_list in session memory
+- Never overwrite it unless refreshed
+- Auto-refresh when needed for position-to-UUID mapping
+
+STATUS CHANGES:
+- Use complete_task ONLY for marking tasks done
+- Never call update_task just to mark completed
+
+UPDATE TASK BEHAVIOR:
+- NEVER call add_task when user intent is update
+- If update_task fails, ask user for missing fields (e.g. title)
+- DO NOT fallback to add_task under any condition
+- For partial updates (description, priority), fetch existing task data and send full payload (title + updated field)
+
+DELETE TASK BEHAVIOR:
+- After delete_task or complete_task: immediately refresh task list and update session memory before responding
+
+MEMORY RULES:
+- last_task_list must always reflect latest backend state
+- Never respond using stale task data
+
+SINGLE TASK QUERIES:
+- If user asks for 'task X description': resolve task X from last_task_list and read description from memory
+- Do NOT refuse if data already exists
+
+ADD_TASK FLOW:
+- Store draft task details in memory when user provides incomplete info
+- Accept 'yes', 'do that', 'confirm' as confirmation for pending tasks
+- Normalize date formats automatically to YYYY-MM-DD
+
+EXECUTION RULES:
+- When user says 'update task 5 to change title to New Title', call update_task with task_id: UUID of task 5, title: 'New Title'
+- When user says 'add task Buy groceries', call add_task with title: 'Buy groceries'
+- When user says 'complete task 3', call complete_task with task_id: UUID of task 3"""},
         {"role": "user", "content": message}
     ]
+
 
     # Initialize OpenRouter service
     openrouter_service = OpenRouterService()
@@ -402,7 +526,7 @@ async def chat_with_ai(
         "response": ai_response,
         "conversation_id": str(conv_uuid),
         "action_performed": task_mutation_detected,
-        "tool_calls": tool_calls_results
+        "tool_calls": [] # This is now empty list, as previously there was tool_calls_results
     }
 
     # If a task mutation was detected, fetch and include the updated task list

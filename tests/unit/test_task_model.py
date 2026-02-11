@@ -49,12 +49,12 @@ def test_task_complete_status():
 def test_task_str_representation():
     """Test __str__ method."""
     task = Task(id=1, title="Test Task", status="Incomplete")
-    expected = "ID: 1 | Title: Test Task | Status: Incomplete"
+    expected = "ID: 1 | Title: Test Task [Medium] | Status: Incomplete"
     assert str(task) == expected
 
 
 def test_task_repr_representation():
     """Test __repr__ method."""
     task = Task(id=1, title="Test Task", description="Desc", status="Complete")
-    expected = "Task(id=1, title='Test Task', description='Desc', status=Complete)"
+    expected = "Task(id=1, title='Test Task', description='Desc', status=Complete, priority=Medium, recurrence_rule=RecurrenceRule(type=<RecurrenceType.NONE: 'none'>, interval_days=None))"
     assert repr(task) == expected

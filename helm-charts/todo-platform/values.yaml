@@ -1,0 +1,132 @@
+# Default values for todo-platform
+
+# Image configuration
+image:
+  repository: todo-platform
+  pullPolicy: IfNotPresent
+  tag: ""
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Resources configuration
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Dapr configuration
+dapr:
+  enabled: true
+  appId: todo-platform
+  appPort: 8000
+  appProtocol: http
+
+# Service configurations
+todoService:
+  replicaCount: 1
+  image:
+    repository: todo-service
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 8001
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+recurringEngine:
+  replicaCount: 1
+  image:
+    repository: recurring-engine
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 8002
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+reminderService:
+  replicaCount: 1
+  image:
+    repository: reminder-service
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 8003
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+chatbotService:
+  replicaCount: 1
+  image:
+    repository: chatbot-service
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 8004
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Database configuration
+database:
+  url: "postgresql://neondb_owner:npg_WLsUO29puhgj@ep-odd-boat-a4qnunlz-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# Event bus configuration
+eventBus:
+  type: redpanda
+  bootstrapServers: "redpanda-cluster-kafka-brokers:9092"
+
+# API Gateway configuration
+apiGateway:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: nginx
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: LoadBalancer
+    port: 8007  # Exposed port for the gateway
+  config:
+    # Routes configuration for the API Gateway
+    routes:
+      - path: /api/v1/tasks
+        service: todo-service
+        port: 8001
+      - path: /api/v1/recurring
+        service: recurring-engine
+        port: 8002
+      - path: /api/v1/reminders
+        service: reminder-service
+        port: 8003
+      - path: /api/v1/notifications
+        service: reminder-service
+        port: 8003
+      - path: /api/v1/chat
+        service: chatbot-service
+        port: 8004

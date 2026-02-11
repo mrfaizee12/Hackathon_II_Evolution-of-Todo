@@ -1,0 +1,33 @@
+{{- if .Values.dapr.enabled }}
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: pubsub
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+  - name: brokers
+    value: {{ .Values.eventBus.bootstrapServers | quote }}
+  - name: consumerGroup
+    value: "dapr-consumer-group"
+  - name: clientID
+    value: "dapr-pubsub"
+  - name: authRequired
+    value: "false"
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.redis
+  version: v1
+  metadata:
+  - name: redisHost
+    value: "localhost:6379"
+  - name: redisPassword
+    value: ""
+  - name: actorStateStore
+    value: "true"
+{{- end }}

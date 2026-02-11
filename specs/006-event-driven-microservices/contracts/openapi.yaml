@@ -1,0 +1,442 @@
+# API Contracts for Event-Driven Microservices
+
+## Todo Service API
+
+### Create Task
+```
+POST /api/v1/tasks
+```
+
+**Request Body**:
+```json
+{
+  "title": "string",
+  "description": "string",
+  "due_date": "datetime",
+  "priority": "enum(low|medium|high|urgent)",
+  "tags": ["string"],
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  },
+  "reminder_settings": {
+    "enabled": "boolean",
+    "minutes_before": "integer"
+  },
+  "user_id": "string"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "due_date": "datetime",
+  "priority": "enum(low|medium|high|urgent)",
+  "tags": ["string"],
+  "status": "enum(pending|in-progress|completed|cancelled)",
+  "created_at": "datetime",
+  "updated_at": "datetime",
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  },
+  "reminder_settings": {
+    "enabled": "boolean",
+    "minutes_before": "integer"
+  },
+  "user_id": "string"
+}
+```
+
+### Get Task
+```
+GET /api/v1/tasks/{taskId}
+```
+
+**Response**:
+```json
+{
+  "id": "string",
+  "title": "string",
+  "description": "string",
+  "due_date": "datetime",
+  "priority": "enum(low|medium|high|urgent)",
+  "tags": ["string"],
+  "status": "enum(pending|in-progress|completed|cancelled)",
+  "created_at": "datetime",
+  "updated_at": "datetime",
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  },
+  "reminder_settings": {
+    "enabled": "boolean",
+    "minutes_before": "integer"
+  },
+  "user_id": "string"
+}
+```
+
+### Update Task
+```
+PUT /api/v1/tasks/{taskId}
+```
+
+**Request Body**:
+```json
+{
+  "title": "string",
+  "description": "string",
+  "due_date": "datetime",
+  "priority": "enum(low|medium|high|urgent)",
+  "tags": ["string"],
+  "status": "enum(pending|in-progress|completed|cancelled)",
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  },
+  "reminder_settings": {
+    "enabled": "boolean",
+    "minutes_before": "integer"
+  }
+}
+```
+
+**Response**: Same as Get Task
+
+### Delete Task
+```
+DELETE /api/v1/tasks/{taskId}
+```
+
+**Response**:
+```json
+{
+  "success": "boolean"
+}
+```
+
+### List Tasks
+```
+GET /api/v1/tasks?userId={userId}&status={status}&priority={priority}&tag={tag}
+```
+
+**Response**:
+```json
+{
+  "tasks": [
+    {
+      "id": "string",
+      "title": "string",
+      "description": "string",
+      "due_date": "datetime",
+      "priority": "enum(low|medium|high|urgent)",
+      "tags": ["string"],
+      "status": "enum(pending|in-progress|completed|cancelled)",
+      "created_at": "datetime",
+      "updated_at": "datetime",
+      "user_id": "string"
+    }
+  ],
+  "total_count": "integer"
+}
+```
+
+## Recurring Engine API
+
+### Trigger Recurring Task
+```
+POST /api/v1/recurring/trigger
+```
+
+**Request Body**:
+```json
+{
+  "parent_task_id": "string",
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  }
+}
+```
+
+**Response**:
+```json
+{
+  "new_task_id": "string",
+  "success": "boolean"
+}
+```
+
+### Get Next Occurrence
+```
+POST /api/v1/recurring/next-occurrence
+```
+
+**Request Body**:
+```json
+{
+  "parent_task_id": "string",
+  "recurrence_pattern": {
+    "type": "enum(daily|weekly|monthly|yearly)",
+    "interval": "integer",
+    "end_date": "datetime"
+  },
+  "last_occurrence": "datetime"
+}
+```
+
+**Response**:
+```json
+{
+  "next_occurrence": "datetime",
+  "should_create_new": "boolean"
+}
+```
+
+## Reminder/Notification Service API
+
+### Schedule Reminder
+```
+POST /api/v1/reminders/schedule
+```
+
+**Request Body**:
+```json
+{
+  "task_id": "string",
+  "user_id": "string",
+  "reminder_time": "datetime",
+  "notification_method": "enum(email|push|sms)"
+}
+```
+
+**Response**:
+```json
+{
+  "reminder_id": "string",
+  "scheduled_time": "datetime",
+  "success": "boolean"
+}
+```
+
+### Cancel Reminder
+```
+DELETE /api/v1/reminders/{reminderId}
+```
+
+**Response**:
+```json
+{
+  "success": "boolean"
+}
+```
+
+### Send Notification
+```
+POST /api/v1/notifications/send
+```
+
+**Request Body**:
+```json
+{
+  "user_id": "string",
+  "method": "enum(email|push|sms)",
+  "title": "string",
+  "message": "string",
+  "metadata": {}
+}
+```
+
+**Response**:
+```json
+{
+  "notification_id": "string",
+  "sent": "boolean"
+}
+```
+
+## Chatbot Service API
+
+### Process Chat Message
+```
+POST /api/v1/chat/process
+```
+
+**Request Body**:
+```json
+{
+  "user_id": "string",
+  "message": "string",
+  "session_id": "string"
+}
+```
+
+**Response**:
+```json
+{
+  "reply": "string",
+  "actions": [
+    {
+      "type": "enum(create_task|update_task|get_tasks|etc)",
+      "params": {}
+    }
+  ]
+}
+```
+
+### Get Chat History
+```
+GET /api/v1/chat/history/{sessionId}
+```
+
+**Response**:
+```json
+{
+  "messages": [
+    {
+      "id": "string",
+      "sender": "enum(user|bot)",
+      "message": "string",
+      "timestamp": "datetime"
+    }
+  ]
+}
+```
+
+## Event Schema Definitions
+
+### Task Created Event
+```json
+{
+  "id": "string",
+  "type": "task-created",
+  "timestamp": "datetime",
+  "source": "todo-service",
+  "correlation_id": "string",
+  "partition_key": "string",
+  "payload": {
+    "task_id": "string",
+    "title": "string",
+    "description": "string",
+    "due_date": "datetime",
+    "priority": "enum(low|medium|high|urgent)",
+    "tags": ["string"],
+    "status": "enum(pending|in-progress|completed|cancelled)",
+    "user_id": "string",
+    "recurrence_pattern": {
+      "type": "enum(daily|weekly|monthly|yearly)",
+      "interval": "integer",
+      "end_date": "datetime"
+    },
+    "reminder_settings": {
+      "enabled": "boolean",
+      "minutes_before": "integer"
+    }
+  }
+}
+```
+
+### Task Updated Event
+```json
+{
+  "id": "string",
+  "type": "task-updated",
+  "timestamp": "datetime",
+  "source": "todo-service",
+  "correlation_id": "string",
+  "partition_key": "string",
+  "payload": {
+    "task_id": "string",
+    "updates": {
+      "title": "string",
+      "description": "string",
+      "due_date": "datetime",
+      "priority": "enum(low|medium|high|urgent)",
+      "tags": ["string"],
+      "status": "enum(pending|in-progress|completed|cancelled)",
+      "recurrence_pattern": {
+        "type": "enum(daily|weekly|monthly|yearly)",
+        "interval": "integer",
+        "end_date": "datetime"
+      },
+      "reminder_settings": {
+        "enabled": "boolean",
+        "minutes_before": "integer"
+      }
+    },
+    "user_id": "string"
+  }
+}
+```
+
+### Recurring Task Triggered Event
+```json
+{
+  "id": "string",
+  "type": "recurring-task-triggered",
+  "timestamp": "datetime",
+  "source": "recurring-engine",
+  "correlation_id": "string",
+  "partition_key": "string",
+  "payload": {
+    "parent_task_id": "string",
+    "new_task_id": "string",
+    "recurrence_pattern": {
+      "type": "enum(daily|weekly|monthly|yearly)",
+      "interval": "integer",
+      "end_date": "datetime"
+    },
+    "user_id": "string"
+  }
+}
+```
+
+### Reminder Triggered Event
+```json
+{
+  "id": "string",
+  "type": "reminder-triggered",
+  "timestamp": "datetime",
+  "source": "reminder-service",
+  "correlation_id": "string",
+  "partition_key": "string",
+  "payload": {
+    "task_id": "string",
+    "user_id": "string",
+    "reminder_time": "datetime",
+    "notification_method": "enum(email|push|sms)",
+    "message": "string"
+  }
+}
+```
+
+### Chatbot Event
+```json
+{
+  "id": "string",
+  "type": "chatbot-event",
+  "timestamp": "datetime",
+  "source": "chatbot-service",
+  "correlation_id": "string",
+  "partition_key": "string",
+  "payload": {
+    "user_id": "string",
+    "session_id": "string",
+    "intent": "string",
+    "entities": {},
+    "action_taken": {
+      "type": "enum(create_task|update_task|get_tasks|etc)",
+      "result": {}
+    }
+  }
+}
+```

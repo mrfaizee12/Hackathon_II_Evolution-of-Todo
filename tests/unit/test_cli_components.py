@@ -11,8 +11,8 @@ def test_format_task_list_empty(capsys):
     """Test formatting empty task list."""
     format_task_list([])
     captured = capsys.readouterr()
-    assert "--- All Tasks ---" in captured.out
-    assert "No tasks found" in captured.out
+    assert "All Tasks" in captured.out
+    assert "No tasks found. Add a task to get started!" in captured.out
 
 
 def test_format_task_list_single_task(capsys):
@@ -24,7 +24,7 @@ def test_format_task_list_single_task(capsys):
     assert "Test Task" in captured.out
     assert "Incomplete" in captured.out
     assert "Test Desc" in captured.out
-
+    assert "[Medium]" in captured.out # Default priority
 
 def test_format_task_list_multiple_tasks(capsys):
     """Test formatting multiple tasks."""
@@ -44,11 +44,10 @@ def test_format_task_list_multiple_tasks(capsys):
     assert "ID: 3" in output
     assert "Task 3" in output
 
-
 def test_format_task_list_empty_description(capsys):
     """Test formatting task with empty description."""
     tasks = [Task(id=1, title="Test Task", description="", status="Incomplete")]
     format_task_list(tasks)
     captured = capsys.readouterr()
-    # Should display "Description: " even if empty
-    assert "Description:" in captured.out
+    # The output_formatter no longer prints "Description:" if it's empty
+    assert "Description:" not in captured.out

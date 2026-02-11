@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "todo-platform.fullname" . }}-recurring-engine
+  labels:
+    {{- include "todo-platform.labels" . | nindent 4 }}
+    app: recurring-engine
+spec:
+  replicas: {{ .Values.recurringEngine.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "todo-platform.selectorLabels" . | nindent 6 }}
+      app: recurring-engine
+  template:
+    metadata:
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "recurring-engine"
+        dapr.io/app-port: "8002"
+        dapr.io/config: "dapr-config"
+      labels:
+        {{- include "todo-platform.selectorLabels" . | nindent 8 }}
+        app: recurring-engine
+    spec:
+      containers:
+        - name: recurring-engine
+          image: "{{ .Values.recurringEngine.image.repository }}:{{ .Values.recurringEngine.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.recurringEngine.image.pullPolicy }}
+          ports:
+            - containerPort: 8002
+          env:
+            - name: SERVICE_NAME
+              value: "recurring-engine"
+            - name: PORT
+              value: "8002"
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: database-url
+            - name: EVENT_BUS_TYPE
+              value: {{ .Values.eventBus.type | quote }}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: secret-key
+            - name: ALGORITHM
+              value: "HS256"
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              value: "30"
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: openrouter-api-key
+          resources:
+            {{- toYaml .Values.recurringEngine.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurring-engine
+  labels:
+    {{- include "todo-platform.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.recurringEngine.service.port }}
+      targetPort: 8002
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "todo-platform.selectorLabels" . | nindent 4 }}
+    app: recurring-engine

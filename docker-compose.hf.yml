@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  todo-service:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfiles/todo-service.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_NAME=todo-service
+      - PORT=8001
+      - DB_URL=${DATABASE_URL}
+      - EVENT_BUS_TYPE=redpanda
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    depends_on:
+      - postgres
+    networks:
+      - todo-network
+
+  recurring-engine:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfiles/recurring-engine.Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_NAME=recurring-engine
+      - PORT=8002
+      - DB_URL=${DATABASE_URL}
+      - EVENT_BUS_TYPE=redpanda
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    depends_on:
+      - todo-service
+    networks:
+      - todo-network
+
+  reminder-service:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfiles/reminder-service.Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_NAME=reminder-service
+      - PORT=8003
+      - DB_URL=${DATABASE_URL}
+      - EVENT_BUS_TYPE=redpanda
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    depends_on:
+      - todo-service
+    networks:
+      - todo-network
+
+  chatbot-service:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfiles/chatbot-service.Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - SERVICE_NAME=chatbot-service
+      - PORT=8004
+      - DB_URL=${DATABASE_URL}
+      - EVENT_BUS_TYPE=redpanda
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    depends_on:
+      - todo-service
+    networks:
+      - todo-network
+
+  postgres:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=todo_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - todo-network
+
+  redpanda:
+    image: docker.vectorized.io/vectorized/redpanda:v21.11.2
+    command:
+      - redpanda
+      - start
+      - --smp
+      - '1'
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - '0'
+      - --set
+      - rpk.advertised.kafka.api=0.0.0.0:9092
+    ports:
+      - "9092:9092"
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

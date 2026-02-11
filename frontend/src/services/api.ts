@@ -21,6 +21,11 @@ export interface Todo {
   created_at: string;
   updated_at: string;
   user_id: string;
+  // Advanced features
+  recurrence_type?: 'none' | 'daily' | 'weekly' | 'monthly';
+  recurrence_interval?: number;
+  next_occurrence?: string;
+  reminder_at?: string;
 }
 
 export interface User {
@@ -203,7 +208,10 @@ class ApiService {
     description?: string,
     priority: string = 'medium',
     tags: string = '', // comma-separated string
-    due_date?: string
+    due_date?: string,
+    recurrence_type?: 'none' | 'daily' | 'weekly' | 'monthly',
+    recurrence_interval?: number,
+    reminder_at?: string
   ): Promise<ApiResponse<Todo>> {
     // Process tags to ensure they are properly formatted (comma-separated)
     let processedTags = '';
@@ -212,8 +220,16 @@ class ApiService {
       processedTags = tagList.join(',');
     }
 
-    // Prepare the request body, omitting due_date if it's empty or invalid
-    const requestBody: any = { title, description, priority, tags: processedTags };
+    // Prepare the request body, omitting optional fields if they're empty or invalid
+    const requestBody: any = { 
+      title, 
+      description, 
+      priority, 
+      tags: processedTags,
+      recurrence_type: recurrence_type || 'none',
+      recurrence_interval
+    };
+    
     if (due_date && due_date.trim() !== '') {
       // Convert to ISO-8601 format if it's not already in that format
       let formattedDueDate = due_date;
@@ -234,6 +250,27 @@ class ApiService {
       }
       requestBody.due_date = formattedDueDate;
     }
+    
+    if (reminder_at && reminder_at.trim() !== '') {
+      // Convert to ISO-8601 format if it's not already in that format
+      let formattedReminder = reminder_at;
+      try {
+        // Check if the date is already in ISO format, if not convert it
+        if (!reminder_at.includes('T')) {
+          // If it's just a date (YYYY-MM-DD), convert to ISO format with time
+          const dateObj = new Date(reminder_at);
+          formattedReminder = dateObj.toISOString();
+        } else {
+          // If it already has time, make sure it's in proper ISO format
+          const dateObj = new Date(reminder_at);
+          formattedReminder = dateObj.toISOString();
+        }
+      } catch (error) {
+        // If parsing fails, try to send as is (let backend handle validation)
+        formattedReminder = reminder_at;
+      }
+      requestBody.reminder_at = formattedReminder;
+    }
 
     return this.request('/todos', {
       method: 'POST',
@@ -250,6 +287,9 @@ class ApiService {
       priority?: string;
       tags?: string;
       due_date?: string;
+      recurrence_type?: 'none' | 'daily' | 'weekly' | 'monthly';
+      recurrence_interval?: number;
+      reminder_at?: string;
     }
   ): Promise<ApiResponse<Todo>> {
     // Process tags if they are being updated to ensure they are properly formatted (comma-separated)
@@ -287,6 +327,33 @@ class ApiService {
       } else {
         // If due_date is empty, remove it from the update object
         delete processedUpdates.due_date;
+      }
+    }
+
+    // Handle reminder_at formatting for updates
+    if (processedUpdates.reminder_at !== undefined) {
+      if (processedUpdates.reminder_at && processedUpdates.reminder_at.trim() !== '') {
+        // Convert to ISO-8601 format if it's not already in that format
+        let formattedReminder = processedUpdates.reminder_at;
+        try {
+          // Check if the date is already in ISO format, if not convert it
+          if (!processedUpdates.reminder_at.includes('T')) {
+            // If it's just a date (YYYY-MM-DD), convert to ISO format with time
+            const dateObj = new Date(processedUpdates.reminder_at);
+            formattedReminder = dateObj.toISOString();
+          } else {
+            // If it already has time, make sure it's in proper ISO format
+            const dateObj = new Date(processedUpdates.reminder_at);
+            formattedReminder = dateObj.toISOString();
+          }
+        } catch (error) {
+          // If parsing fails, try to send as is (let backend handle validation)
+          formattedReminder = processedUpdates.reminder_at;
+        }
+        processedUpdates.reminder_at = formattedReminder;
+      } else {
+        // If reminder_at is empty, remove it from the update object
+        delete processedUpdates.reminder_at;
       }
     }
 

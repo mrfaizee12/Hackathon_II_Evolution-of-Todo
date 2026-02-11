@@ -1,12 +1,19 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Column, DateTime, String
 from typing import TYPE_CHECKING, Optional, List
 from datetime import datetime
 import uuid
-from pydantic import field_validator, field_serializer
+from pydantic import field_validator, field_serializer, PositiveInt
+from enum import Enum
 
 # Handle circular import for relationship
 if TYPE_CHECKING:
     from .user import User
+
+class RecurrenceType(str, Enum):
+    NONE = "none"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
 
 class TodoBase(SQLModel):
     title: str = Field(nullable=False, max_length=255)
@@ -14,10 +21,10 @@ class TodoBase(SQLModel):
     completed: bool = Field(default=False)
     priority: str = Field(default="medium", nullable=False)  # enum: low, medium, high
     tags: str = Field(default="", nullable=False)  # comma-separated tags
-    due_date: Optional[datetime] = Field(default=None)
     # AI Integration Fields
     ai_generated: bool = Field(default=False)  # indicates if todo was created via AI
     ai_context: Optional[str] = Field(default=None, max_length=500)  # context from AI conversation
+
 
 class Todo(TodoBase, table=True):
     """
@@ -28,8 +35,35 @@ class Todo(TodoBase, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Advanced Todo Fields
+    due_date: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    recurrence_type: RecurrenceType = Field(default=RecurrenceType.NONE, sa_column=Column(String))
+    recurrence_interval: Optional[PositiveInt] = Field(default=None)
+    next_occurrence: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    reminder_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+
     # Relationship to user
     user: "User" = Relationship(back_populates="todos")
+
+    @field_validator('due_date', 'next_occurrence', 'reminder_at', mode='before')
+    def validate_future_datetime(cls, v):
+        if v and v < datetime.utcnow():
+            raise ValueError('Date/time must be in the future')
+        return v
+    
+    @field_validator('reminder_at', mode='after')
+    def validate_reminder_before_due_date(cls, v, info):
+        if v and info.data.get('due_date') and v > info.data['due_date']:
+            raise ValueError('Reminder time must be before or equal to due date')
+        return v
+
+    @field_validator('recurrence_interval', mode='after')
+    def validate_recurrence_interval(cls, v, info):
+        if info.data.get('recurrence_type') != RecurrenceType.NONE and v is None:
+            raise ValueError('Recurrence interval is required for recurring tasks')
+        if info.data.get('recurrence_type') == RecurrenceType.NONE and v is not None:
+            raise ValueError('Recurrence interval should not be set for non-recurring tasks')
+        return v
 
 
 class TodoCreate(TodoBase):
@@ -39,6 +73,14 @@ class TodoCreate(TodoBase):
     title: str = Field(min_length=1, max_length=255)
     priority: Optional[str] = Field(default="medium", max_length=20)  # enum: low, medium, high
     tags: Optional[str] = Field(default="", max_length=500)  # comma-separated tags
+    
+    # Advanced Todo Fields
+    due_date: Optional[datetime] = Field(default=None)
+    recurrence_type: RecurrenceType = Field(default=RecurrenceType.NONE)
+    recurrence_interval: Optional[PositiveInt] = Field(default=None)
+    next_occurrence: Optional[datetime] = Field(default=None)
+    reminder_at: Optional[datetime] = Field(default=None)
+
     ai_generated: bool = Field(default=False)  # indicates if todo was created via AI
     ai_context: Optional[str] = Field(default=None, max_length=500)  # context from AI conversation
 
@@ -67,7 +109,14 @@ class TodoRead(TodoBase):
     user_id: uuid.UUID
     priority: str
     tags: str
+    
+    # Advanced Todo Fields
     due_date: Optional[datetime]
+    recurrence_type: RecurrenceType
+    recurrence_interval: Optional[PositiveInt]
+    next_occurrence: Optional[datetime]
+    reminder_at: Optional[datetime]
+
     created_at: datetime
     updated_at: datetime
 
@@ -78,6 +127,13 @@ class TodoRead(TodoBase):
             return "medium"
         return value
 
+    @field_serializer('recurrence_type')
+    def serialize_recurrence_type(self, value: Optional[RecurrenceType]) -> str:
+        # If recurrence_type is None, return default "none"
+        if value is None:
+            return RecurrenceType.NONE.value
+        return value.value
+
 class TodoUpdate(SQLModel):
     """
     Schema for updating todo information.
@@ -87,7 +143,14 @@ class TodoUpdate(SQLModel):
     completed: Optional[bool] = None
     priority: Optional[str] = None
     tags: Optional[str] = None
+    
+    # Advanced Todo Fields
     due_date: Optional[datetime] = None
+    recurrence_type: Optional[RecurrenceType] = None
+    recurrence_interval: Optional[PositiveInt] = None
+    next_occurrence: Optional[datetime] = None
+    reminder_at: Optional[datetime] = None
+
     ai_generated: Optional[bool] = None
     ai_context: Optional[str] = None
 

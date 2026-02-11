@@ -2,18 +2,19 @@ from typing import Dict, Any
 import asyncio
 import json
 from mcp.server import Server
-from ..database.database import Session
-from ..models.user import User
-from ..tools.todo_tools import (
+from src.database.database import Session # Absolute import
+from src.models.user import User # Absolute import
+from src.tools.todo_tools import (
     add_task, list_tasks, update_task, complete_task, delete_task,
-    AddTaskInput, ListTasksInput, UpdateTaskInput, CompleteTaskInput, DeleteTaskInput
+    set_task_recurrence, remove_task_recurrence, set_task_due_date, set_task_reminder, list_upcoming_tasks,
+    AddTaskInput, ListTasksInput, UpdateTaskInput, CompleteTaskInput, DeleteTaskInput,
+    SetRecurrenceInput, RemoveRecurrenceInput, SetDueDateInput, SetReminderInput, ListUpcomingTasksInput
 )
 
 
 class MCPTaskServer:
     """
-    MCP Server that exposes 5 standardized tools for AI consumption:
-    add_task, list_tasks, complete_task, delete_task, update_task.
+    MCP Server that exposes standardized tools for AI consumption.
     """
 
     def __init__(self):
@@ -22,104 +23,53 @@ class MCPTaskServer:
         self._register_tools()
 
     def _register_tools(self):
-        """Register the 5 MCP tools with the server."""
-        # Create a mapping of tool names to their corresponding class methods
-        # This ensures the service can dynamically call the right tool
+        """Register the MCP tools with the server."""
         self.tools_map = {
-            "add_task": self.add_task_tool,
-            "list_tasks": self.list_tasks_tool,
-            "complete_task": self.complete_task_tool,
-            "delete_task": self.delete_task_tool,
-            "update_task": self.update_task_tool
+            "add_task": add_task,
+            "list_tasks": list_tasks,
+            "complete_task": complete_task,
+            "delete_task": delete_task,
+            "update_task": update_task,
+            "set_task_recurrence": set_task_recurrence,
+            "remove_task_recurrence": remove_task_recurrence,
+            "set_task_due_date": set_task_due_date,
+            "set_task_reminder": set_task_reminder,
+            "list_upcoming_tasks": list_upcoming_tasks
         }
-
-        # In a real MCP implementation, we would use decorators like @self.server.tools.register
-        # For now, we're preparing the tools to be available via the tools_map
-        pass
 
     def get_server(self):
         """Return the initialized MCP server instance."""
         return self.server
 
     def add_task_tool(self, input_data: AddTaskInput, user_id: str, db_session: Session) -> Dict[str, Any]:
-        """
-        MCP tool to add a new task to the user's todo list.
-
-        Args:
-            input_data: Contains task details
-            user_id: ID of the user creating the task
-            db_session: Database session
-
-        Returns:
-            Result of the task creation
-        """
-        # Call the actual add_task function from todo_tools
-        result = add_task(input_data, user_id, db_session)
-        return result
+        return add_task(input_data, user_id, db_session)
 
     def list_tasks_tool(self, input_data: ListTasksInput, user_id: str, db_session: Session) -> Dict[str, Any]:
-        """
-        MCP tool to list tasks from the user's todo list with optional filtering.
-
-        Args:
-            input_data: Contains filtering options
-            user_id: ID of the user whose tasks to list
-            db_session: Database session
-
-        Returns:
-            List of tasks
-        """
-        # Call the actual list_tasks function from todo_tools
-        result = list_tasks(input_data, user_id, db_session)
-        return result
+        return list_tasks(input_data, user_id, db_session)
 
     def complete_task_tool(self, input_data: CompleteTaskInput, user_id: str, db_session: Session) -> Dict[str, Any]:
-        """
-        MCP tool to mark a task as completed/done.
-
-        Args:
-            input_data: Contains task ID and completion status
-            user_id: ID of the user whose task to update
-            db_session: Database session
-
-        Returns:
-            Result of the completion operation
-        """
-        # Call the actual complete_task function from todo_tools
-        result = complete_task(input_data, user_id, db_session)
-        return result
+        return complete_task(input_data, user_id, db_session)
 
     def delete_task_tool(self, input_data: DeleteTaskInput, user_id: str, db_session: Session) -> Dict[str, Any]:
-        """
-        MCP tool to delete a task from the user's todo list.
-
-        Args:
-            input_data: Contains task ID to delete
-            user_id: ID of the user whose task to delete
-            db_session: Database session
-
-        Returns:
-            Result of the deletion operation
-        """
-        # Call the actual delete_task function from todo_tools
-        result = delete_task(input_data, user_id, db_session)
-        return result
+        return delete_task(input_data, user_id, db_session)
 
     def update_task_tool(self, input_data: UpdateTaskInput, user_id: str, db_session: Session) -> Dict[str, Any]:
-        """
-        MCP tool to update an existing task in the user's todo list.
+        return update_task(input_data, user_id, db_session)
+    
+    def set_task_recurrence_tool(self, input_data: SetRecurrenceInput, user_id: str, db_session: Session) -> Dict[str, Any]:
+        return set_task_recurrence(input_data, user_id, db_session)
 
-        Args:
-            input_data: Contains task ID and updates
-            user_id: ID of the user whose task to update
-            db_session: Database session
+    def remove_task_recurrence_tool(self, input_data: RemoveRecurrenceInput, user_id: str, db_session: Session) -> Dict[str, Any]:
+        return remove_task_recurrence(input_data, user_id, db_session)
 
-        Returns:
-            Result of the update operation
-        """
-        # Call the actual update_task function from todo_tools
-        result = update_task(input_data, user_id, db_session)
-        return result
+    def set_task_due_date_tool(self, input_data: SetDueDateInput, user_id: str, db_session: Session) -> Dict[str, Any]:
+        return set_task_due_date(input_data, user_id, db_session)
+
+    def set_task_reminder_tool(self, input_data: SetReminderInput, user_id: str, db_session: Session) -> Dict[str, Any]:
+        return set_task_reminder(input_data, user_id, db_session)
+
+    def list_upcoming_tasks_tool(self, input_data: ListUpcomingTasksInput, user_id: str, db_session: Session) -> Dict[str, Any]:
+        return list_upcoming_tasks(input_data, user_id, db_session)
 
     def get_tools(self) -> list:
         """
@@ -140,6 +90,8 @@ class MCPTaskServer:
                         "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "Priority level"},
                         "tags": {"type": "string", "description": "Comma-separated tags for the task"},
                         "due_date": {"type": "string", "description": "ISO format date string for due date"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"},
                         "ai_context": {"type": "string", "description": "Context for AI-generated task"}
                     },
                     "required": ["title"]
@@ -192,9 +144,70 @@ class MCPTaskServer:
                         "priority": {"type": "string", "enum": ["low", "medium", "high"], "description": "New priority level"},
                         "tags": {"type": "string", "description": "New comma-separated tags for the task"},
                         "due_date": {"type": "string", "description": "New ISO format date string for due date"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"},
                         "ai_context": {"type": "string", "description": "Context for AI-assisted update"}
                     },
                     "required": ["task_id"]
+                }
+            },
+            {
+                "name": "set_task_recurrence",
+                "description": "Set or update recurrence settings for a task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "recurrence_type": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"], "description": "Frequency of recurrence"},
+                        "recurrence_interval": {"type": "integer", "description": "Interval multiplier for recurrence"}
+                    },
+                    "required": ["task_id", "recurrence_type"]
+                }
+            },
+            {
+                "name": "remove_task_recurrence",
+                "description": "Remove recurrence settings from a task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"}
+                    },
+                    "required": ["task_id"]
+                }
+            },
+            {
+                "name": "set_task_due_date",
+                "description": "Set or update the due date for a task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "due_date": {"type": "string", "description": "ISO format date string for the new due date"}
+                    },
+                    "required": ["task_id", "due_date"]
+                }
+            },
+            {
+                "name": "set_task_reminder",
+                "description": "Set or update the reminder time for a task",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string", "description": "The ID of the task to update"},
+                        "reminder_at": {"type": "string", "description": "ISO format date string for when to send the reminder"}
+                    },
+                    "required": ["task_id", "reminder_at"]
+                }
+            },
+            {
+                "name": "list_upcoming_tasks",
+                "description": "List tasks with upcoming due dates for the user",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "days_ahead": {"type": "integer", "description": "Number of days to look ahead for due tasks (default 7)"},
+                        "include_overdue": {"type": "boolean", "description": "Whether to include overdue tasks (default false)"}
+                    }
                 }
             }
         ]

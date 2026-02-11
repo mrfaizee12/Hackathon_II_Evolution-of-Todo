@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recurring-engine
+  namespace: todo-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recurring-engine
+  template:
+    metadata:
+      labels:
+        app: recurring-engine
+    spec:
+      containers:
+      - name: recurring-engine
+        image: recurring-engine:5.0.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8002
+        env:
+        - name: PYTHONPATH
+          value: "/app:/app/backend"
+        - name: PORT
+          value: "8002"
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: SECRET_KEY
+        - name: ALGORITHM
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ALGORITHM
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: EVENT_BUS_TYPE
+          value: "redpanda"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recurring-engine
+  namespace: todo-chatbot
+spec:
+  selector:
+    app: recurring-engine
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002
+  type: ClusterIP

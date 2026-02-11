@@ -1,0 +1,202 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Todo Platform Dashboard",
+    "tags": ["event-driven", "microservices"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Overview",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"todo-service\"}",
+            "legendFormat": "Todo Service"
+          },
+          {
+            "expr": "up{job=\"recurring-engine\"}",
+            "legendFormat": "Recurring Engine"
+          },
+          {
+            "expr": "up{job=\"reminder-service\"}",
+            "legendFormat": "Reminder Service"
+          },
+          {
+            "expr": "up{job=\"chatbot-service\"}",
+            "legendFormat": "Chatbot Service"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": ["lastNotNull"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Request Rate by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(todo_requests_total[5m])) by (method)",
+            "legendFormat": "Todo Service - {{method}}"
+          },
+          {
+            "expr": "sum(rate(recurring_requests_total[5m])) by (method)",
+            "legendFormat": "Recurring Engine - {{method}}"
+          },
+          {
+            "expr": "sum(rate(reminder_requests_total[5m])) by (method)",
+            "legendFormat": "Reminder Service - {{method}}"
+          },
+          {
+            "expr": "sum(rate(chatbot_requests_total[5m])) by (method)",
+            "legendFormat": "Chatbot Service - {{method}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "show": true
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Average Request Duration by Service",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(todo_request_duration_seconds_bucket[5m])) by (le, method))",
+            "legendFormat": "Todo Service - {{method}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(recurring_request_duration_seconds_bucket[5m])) by (le, method))",
+            "legendFormat": "Recurring Engine - {{method}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(reminder_request_duration_seconds_bucket[5m])) by (le, method))",
+            "legendFormat": "Reminder Service - {{method}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(chatbot_request_duration_seconds_bucket[5m])) by (le, method))",
+            "legendFormat": "Chatbot Service - {{method}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds)",
+            "show": true
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Event Throughput",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(todo_events_published_total[5m])) by (event_type)",
+            "legendFormat": "Todo Service - {{event_type}}"
+          },
+          {
+            "expr": "sum(rate(recurring_events_consumed_total[5m])) by (event_type)",
+            "legendFormat": "Recurring Engine - {{event_type}}"
+          },
+          {
+            "expr": "sum(rate(reminder_events_consumed_total[5m])) by (event_type)",
+            "legendFormat": "Reminder Service - {{event_type}}"
+          },
+          {
+            "expr": "sum(rate(chatbot_events_consumed_total[5m])) by (event_type)",
+            "legendFormat": "Chatbot Service - {{event_type}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "show": true
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Tasks",
+        "type": "singlestat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "todo_active_tasks",
+            "legendFormat": "Active Tasks"
+          }
+        ],
+        "valueName": "current",
+        "prefix": "",
+        "postfix": " tasks"
+      },
+      {
+        "id": 6,
+        "title": "Active Schedules",
+        "type": "singlestat",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16},
+        "targets": [
+          {
+            "expr": "recurring_active_schedules",
+            "legendFormat": "Active Schedules"
+          }
+        ],
+        "valueName": "current",
+        "prefix": "",
+        "postfix": " schedules"
+      },
+      {
+        "id": 7,
+        "title": "Active Reminders",
+        "type": "singlestat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "reminder_active_reminders",
+            "legendFormat": "Active Reminders"
+          }
+        ],
+        "valueName": "current",
+        "prefix": "",
+        "postfix": " reminders"
+      },
+      {
+        "id": 8,
+        "title": "Active Sessions",
+        "type": "singlestat",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 16},
+        "targets": [
+          {
+            "expr": "chatbot_active_sessions",
+            "legendFormat": "Active Sessions"
+          }
+        ],
+        "valueName": "current",
+        "prefix": "",
+        "postfix": " sessions"
+      }
+    ],
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+}

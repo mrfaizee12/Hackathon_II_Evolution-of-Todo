@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reminder-service
+  namespace: todo-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reminder-service
+  template:
+    metadata:
+      labels:
+        app: reminder-service
+    spec:
+      containers:
+      - name: reminder-service
+        image: reminder-service:5.0.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8003
+        env:
+        - name: PYTHONPATH
+          value: "/app:/app/backend"
+        - name: PORT
+          value: "8003"
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: SECRET_KEY
+        - name: ALGORITHM
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ALGORITHM
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: EVENT_BUS_TYPE
+          value: "redpanda"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reminder-service
+  namespace: todo-chatbot
+spec:
+  selector:
+    app: reminder-service
+  ports:
+    - protocol: TCP
+      port: 8003
+      targetPort: 8003
+  type: ClusterIP

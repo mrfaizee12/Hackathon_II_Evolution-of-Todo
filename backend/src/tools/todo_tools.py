@@ -4,11 +4,11 @@ These tools allow the AI agent to perform todo operations through function calli
 """
 
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field 
 from sqlmodel import Session, select
-from ..models.todo import Todo, TodoCreate, TodoUpdate
+from ..models.todo import Todo, TodoCreate, TodoUpdate, RecurrenceType
 from ..services.todo_service import TodoService
-
+from datetime import datetime # Import datetime for parsing due_date
 
 class AddTaskInput(BaseModel):
     """Input for adding a new task."""
@@ -18,6 +18,9 @@ class AddTaskInput(BaseModel):
     tags: Optional[str] = ""
     due_date: Optional[str] = None  # ISO format date string
     ai_context: Optional[str] = "Added via AI assistant"
+    # New recurrence fields for addTask
+    recurrence_type: Optional[str] = "none" # "none", "daily", "weekly", "monthly"
+    recurrence_interval: Optional[int] = None
 
 
 class UpdateTaskInput(BaseModel):
@@ -30,6 +33,9 @@ class UpdateTaskInput(BaseModel):
     tags: Optional[str] = None
     due_date: Optional[str] = None  # ISO format date string
     ai_context: Optional[str] = "Updated via AI assistant"
+    # New recurrence fields for updateTask
+    recurrence_type: Optional[str] = None # "none", "daily", "weekly", "monthly"
+    recurrence_interval: Optional[int] = None
 
 
 class CompleteTaskInput(BaseModel):
@@ -48,6 +54,31 @@ class ListTasksInput(BaseModel):
     status: Optional[str] = None  # "all", "pending", "completed"
     limit: Optional[int] = 100
     offset: Optional[int] = 0
+
+class SetRecurrenceInput(BaseModel):
+    """Input for setting recurrence for a task."""
+    task_id: str
+    recurrence_type: str # "none", "daily", "weekly", "monthly"
+    recurrence_interval: Optional[int] = None
+
+class RemoveRecurrenceInput(BaseModel):
+    """Input for removing recurrence from a task."""
+    task_id: str
+
+class SetDueDateInput(BaseModel):
+    """Input for setting or updating the due date of a task."""
+    task_id: str
+    due_date: str # ISO format date string
+
+class ListUpcomingTasksInput(BaseModel):
+    """Input for listing upcoming tasks."""
+    days_ahead: Optional[int] = Field(7, description="Number of days to look ahead for due tasks")
+    include_overdue: Optional[bool] = Field(False, description="Whether to include overdue tasks")
+
+class SetReminderInput(BaseModel):
+    """Input for setting or updating the reminder time for a task."""
+    task_id: str
+    reminder_at: str # ISO format date string
 
 
 def add_task(input_data: AddTaskInput, user_id: str, db_session: Session) -> dict:
@@ -70,16 +101,17 @@ def add_task(input_data: AddTaskInput, user_id: str, db_session: Session) -> dic
             priority=input_data.priority,
             tags=input_data.tags,
             ai_generated=True,
-            ai_context=input_data.ai_context
+            ai_context=input_data.ai_context,
+            recurrence_type=RecurrenceType(input_data.recurrence_type), # Convert str to Enum
+            recurrence_interval=input_data.recurrence_interval
         )
 
         # If due_date is provided, parse it
         if input_data.due_date:
-            from datetime import datetime
             todo_data.due_date = datetime.fromisoformat(input_data.due_date.replace('Z', '+00:00'))
 
         # Use the existing TodoService to create the task
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
         created_todo = todo_service.create_todo(db_session, user_id, todo_data)
 
         return {
@@ -109,7 +141,7 @@ def list_tasks(input_data: ListTasksInput, user_id: str, db_session: Session) ->
     """
     try:
         # Use the existing TodoService to get tasks
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # Prepare filters based on input
         filters = {}
@@ -137,7 +169,11 @@ def list_tasks(input_data: ListTasksInput, user_id: str, db_session: Session) ->
                 "priority": todo.priority,
                 "tags": todo.tags,
                 "due_date": todo.due_date.isoformat() if todo.due_date else None,
-                "created_at": todo.created_at.isoformat()
+                "created_at": todo.created_at.isoformat(),
+                "recurrence_type": todo.recurrence_type,
+                "recurrence_interval": todo.recurrence_interval,
+                "next_occurrence": todo.next_occurrence.isoformat() if todo.next_occurrence else None,
+                "reminder_at": todo.reminder_at.isoformat() if todo.reminder_at else None,
             }
             tasks.append(task_info)
 
@@ -168,7 +204,7 @@ def update_task(input_data: UpdateTaskInput, user_id: str, db_session: Session) 
     """
     try:
         # Use the existing TodoService to update the task
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # First, verify the task belongs to the user
         statement = select(Todo).where(Todo.id == input_data.task_id, Todo.user_id == user_id)
@@ -187,12 +223,13 @@ def update_task(input_data: UpdateTaskInput, user_id: str, db_session: Session) 
             completed=input_data.completed,
             priority=input_data.priority,
             tags=input_data.tags,
-            ai_context=input_data.ai_context
+            ai_context=input_data.ai_context,
+            recurrence_type=RecurrenceType(input_data.recurrence_type) if input_data.recurrence_type else None,
+            recurrence_interval=input_data.recurrence_interval
         )
 
         # If due_date is provided, parse it
         if input_data.due_date:
-            from datetime import datetime
             update_data.due_date = datetime.fromisoformat(input_data.due_date.replace('Z', '+00:00'))
 
         # Update the task
@@ -225,7 +262,7 @@ def complete_task(input_data: CompleteTaskInput, user_id: str, db_session: Sessi
     """
     try:
         # Use the existing TodoService to update the task
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # First, verify the task belongs to the user
         statement = select(Todo).where(Todo.id == input_data.task_id, Todo.user_id == user_id)
@@ -241,7 +278,7 @@ def complete_task(input_data: CompleteTaskInput, user_id: str, db_session: Sessi
         update_data = TodoUpdate(completed=input_data.completed)
 
         # Update the task
-        updated_todo = todo_service.update_todo(db_session, input_data.task_id, user_id, update_data)
+        updated_todo = todo_service.update_todo_status(db_session, input_data.task_id, user_id, update_data) # Use update_todo_status
 
         return {
             "success": True,
@@ -271,7 +308,7 @@ def delete_task(input_data: DeleteTaskInput, user_id: str, db_session: Session) 
     """
     try:
         # Use the existing TodoService to delete the task
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # First, verify the task belongs to the user
         statement = select(Todo).where(Todo.id == input_data.task_id, Todo.user_id == user_id)
@@ -311,7 +348,7 @@ def get_all_tasks(user_id: str, db_session: Session) -> dict:
     """
     try:
         # Use the existing TodoService to get tasks
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # Get all todos for the user
         statement = select(Todo).where(Todo.user_id == user_id)
@@ -327,7 +364,11 @@ def get_all_tasks(user_id: str, db_session: Session) -> dict:
                 "priority": todo.priority,
                 "tags": todo.tags,
                 "due_date": todo.due_date.isoformat() if todo.due_date else None,
-                "created_at": todo.created_at.isoformat()
+                "created_at": todo.created_at.isoformat(),
+                "recurrence_type": todo.recurrence_type,
+                "recurrence_interval": todo.recurrence_interval,
+                "next_occurrence": todo.next_occurrence.isoformat() if todo.next_occurrence else None,
+                "reminder_at": todo.reminder_at.isoformat() if todo.reminder_at else None,
             }
             tasks.append(task_info)
 
@@ -358,7 +399,7 @@ def mark_task_done(task_id: str, user_id: str, db_session: Session) -> dict:
     """
     try:
         # Use the existing TodoService to update the task
-        todo_service = TodoService(db_session)
+        todo_service = TodoService(db_session) # Pass db_session to service constructor
 
         # First, verify the task belongs to the user
         statement = select(Todo).where(Todo.id == task_id, Todo.user_id == user_id)
@@ -374,7 +415,7 @@ def mark_task_done(task_id: str, user_id: str, db_session: Session) -> dict:
         update_data = TodoUpdate(completed=True)
 
         # Update the task
-        updated_todo = todo_service.update_todo(db_session, task_id, user_id, update_data)
+        updated_todo = todo_service.update_todo_status(db_session, task_id, user_id, update_data) # Use update_todo_status
 
         return {
             "success": True,
@@ -387,4 +428,195 @@ def mark_task_done(task_id: str, user_id: str, db_session: Session) -> dict:
         return {
             "success": False,
             "message": f"Failed to mark task as done: {str(e)}"
+        }
+
+def set_task_recurrence(input_data: SetRecurrenceInput, user_id: str, db_session: Session) -> dict:
+    """
+    Set or update recurrence settings for a task.
+
+    Args:
+        input_data: Contains task ID, recurrence type, and interval
+        user_id: ID of the user whose task to update
+        db_session: Database session
+
+    Returns:
+        Dictionary with result of the operation
+    """
+    try:
+        todo_service = TodoService(db_session)
+        # Create a TodoUpdate object with only the recurrence fields
+        todo_update = TodoUpdate(
+            recurrence_type=RecurrenceType(input_data.recurrence_type),
+            recurrence_interval=input_data.recurrence_interval
+        )
+        updated_todo = todo_service.update_todo(db_session, input_data.task_id, user_id, todo_update)
+        if not updated_todo:
+            return {
+                "success": False,
+                "message": "Task not found or does not belong to user"
+            }
+        return {
+            "success": True,
+            "message": f"✅ Recurrence set for task '{updated_todo.title}'. Type: {updated_todo.recurrence_type}, Interval: {updated_todo.recurrence_interval}",
+            "task_id": str(updated_todo.id),
+            "recurrence_type": updated_todo.recurrence_type
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to set task recurrence: {str(e)}"
+        }
+
+def remove_task_recurrence(input_data: RemoveRecurrenceInput, user_id: str, db_session: Session) -> dict:
+    """
+    Remove recurrence settings from a task.
+
+    Args:
+        input_data: Contains task ID
+        user_id: ID of the user whose task to update
+        db_session: Database session
+
+    Returns:
+        Dictionary with result of the operation
+    """
+    try:
+        todo_service = TodoService(db_session)
+        todo_update = TodoUpdate(
+            recurrence_type=RecurrenceType.NONE,
+            recurrence_interval=None,
+            next_occurrence=None
+        )
+        updated_todo = todo_service.update_todo(db_session, input_data.task_id, user_id, todo_update)
+        if not updated_todo:
+            return {
+                "success": False,
+                "message": "Task not found or does not belong to user"
+            }
+        return {
+            "success": True,
+            "message": f"✅ Recurrence removed from task '{updated_todo.title}'.",
+            "task_id": str(updated_todo.id),
+            "recurrence_type": updated_todo.recurrence_type
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to remove task recurrence: {str(e)}"
+        }
+
+def set_task_due_date(input_data: SetDueDateInput, user_id: str, db_session: Session) -> dict:
+    """
+    Set or update the due date for a task.
+
+    Args:
+        input_data: Contains task ID and new due date
+        user_id: ID of the user whose task to update
+        db_session: Database session
+
+    Returns:
+        Dictionary with result of the operation
+    """
+    try:
+        todo_service = TodoService(db_session)
+        todo_update = TodoUpdate(due_date=datetime.fromisoformat(input_data.due_date.replace('Z', '+00:00')))
+        updated_todo = todo_service.update_todo(db_session, input_data.task_id, user_id, todo_update)
+        if not updated_todo:
+            return {
+                "success": False,
+                "message": "Task not found or does not belong to user"
+            }
+        return {
+            "success": True,
+            "message": f"🗓️ Due date set for task '{updated_todo.title}' to {updated_todo.due_date.isoformat()}.",
+            "task_id": str(updated_todo.id),
+            "due_date": updated_todo.due_date.isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to set due date: {str(e)}"
+        }
+
+def list_upcoming_tasks(input_data: ListUpcomingTasksInput, user_id: str, db_session: Session) -> dict:
+    """
+    List tasks with upcoming due dates for the user.
+
+    Args:
+        input_data: Contains filtering options for upcoming tasks
+        user_id: ID of the user whose tasks to list
+        db_session: Database session
+
+    Returns:
+        Dictionary with list of upcoming tasks
+    """
+    try:
+        todo_service = TodoService(db_session)
+        upcoming_todos = todo_service.get_upcoming_tasks(
+            db_session,
+            user_id,
+            days_ahead=input_data.days_ahead,
+            include_overdue=input_data.include_overdue
+        )
+
+        tasks = []
+        for todo in upcoming_todos:
+            task_info = {
+                "id": str(todo.id),
+                "title": todo.title,
+                "description": todo.description,
+                "completed": todo.completed,
+                "priority": todo.priority,
+                "tags": todo.tags,
+                "due_date": todo.due_date.isoformat() if todo.due_date else None,
+                "created_at": todo.created_at.isoformat(),
+                "recurrence_type": todo.recurrence_type,
+                "recurrence_interval": todo.recurrence_interval,
+                "next_occurrence": todo.next_occurrence.isoformat() if todo.next_occurrence else None,
+                "reminder_at": todo.reminder_at.isoformat() if todo.reminder_at else None,
+            }
+            tasks.append(task_info)
+
+        return {
+            "success": True,
+            "message": f"Retrieved {len(tasks)} upcoming tasks",
+            "tasks": tasks,
+            "total_count": len(tasks)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to list upcoming tasks: {str(e)}"
+        }
+
+def set_task_reminder(input_data: SetReminderInput, user_id: str, db_session: Session) -> dict:
+    """
+    Set or update the reminder time for a task.
+
+    Args:
+        input_data: Contains task ID and new reminder time
+        user_id: ID of the user whose task to update
+        db_session: Database session
+
+    Returns:
+        Dictionary with result of the operation
+    """
+    try:
+        todo_service = TodoService(db_session)
+        todo_update = TodoUpdate(reminder_at=datetime.fromisoformat(input_data.reminder_at.replace('Z', '+00:00')))
+        updated_todo = todo_service.update_todo(db_session, input_data.task_id, user_id, todo_update)
+        if not updated_todo:
+            return {
+                "success": False,
+                "message": "Task not found or does not belong to user"
+            }
+        return {
+            "success": True,
+            "message": f"⏰ Reminder set for task '{updated_todo.title}' at {updated_todo.reminder_at.isoformat()}.",
+            "task_id": str(updated_todo.id),
+            "reminder_at": updated_todo.reminder_at.isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to set reminder: {str(e)}"
         }

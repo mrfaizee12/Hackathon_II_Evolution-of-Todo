@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Todo } from '../services/api';
+import { validateAdvancedTaskFields } from '../utils/validation';
 import Notification from './Notification';
 
 interface TodoFormProps {
@@ -17,8 +18,12 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>(todo?.priority || 'medium');
   const [tags, setTags] = useState(todo?.tags || '');
   const [dueDate, setDueDate] = useState(todo?.due_date || '');
+  const [recurrenceType, setRecurrenceType] = useState<'none' | 'daily' | 'weekly' | 'monthly'>(todo?.recurrence_type || 'none');
+  const [recurrenceInterval, setRecurrenceInterval] = useState<number>(todo?.recurrence_interval || 1);
+  const [reminderAt, setReminderAt] = useState(todo?.reminder_at || '');
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   // Sync state with todo prop when it changes (for editing)
   useEffect(() => {
@@ -28,6 +33,9 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
       setPriority(todo.priority || 'medium');
       setTags(todo.tags || '');
       setDueDate(todo.due_date || '');
+      setRecurrenceType(todo.recurrence_type || 'none');
+      setRecurrenceInterval(todo.recurrence_interval || 1);
+      setReminderAt(todo.reminder_at || '');
     } else {
       // Reset form when todo is null (adding new todo)
       setTitle('');
@@ -35,11 +43,28 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
       setPriority('medium');
       setTags('');
       setDueDate('');
+      setRecurrenceType('none');
+      setRecurrenceInterval(1);
+      setReminderAt('');
     }
   }, [todo]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate advanced fields
+    const validation = validateAdvancedTaskFields(
+      recurrenceType,
+      recurrenceInterval,
+      undefined, // recurrenceEndDate not implemented in form
+      dueDate,
+      reminderAt
+    );
+
+    if (!validation.allValid) {
+      setValidationError('Please check your inputs. Reminder must be before due date if both are set.');
+      return;
+    }
 
     // Call the original onSubmit function
     onSubmit({
@@ -48,6 +73,9 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
       priority,
       tags,
       due_date: dueDate || undefined,
+      recurrence_type: recurrenceType,
+      recurrence_interval: recurrenceType !== 'none' ? recurrenceInterval : undefined,
+      reminder_at: reminderAt || undefined,
       completed: todo?.completed || false, // Keep existing completion status if editing
     });
 
@@ -66,6 +94,7 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
     }
 
     setShowNotification(true);
+    setValidationError(''); // Clear any validation errors
 
     // If onCancel is provided (meaning we're in edit mode), call it to clear editing state
     if (onCancel && todo) {
@@ -132,6 +161,43 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence</label>
+            <select
+              value={recurrenceType}
+              onChange={(e) => setRecurrenceType(e.target.value as 'none' | 'daily' | 'weekly' | 'monthly')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="none">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          {recurrenceType !== 'none' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Repeat Every</label>
+              <input
+                type="number"
+                min="1"
+                value={recurrenceInterval}
+                onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reminder</label>
+            <input
+              type="datetime-local"
+              value={reminderAt}
+              onChange={(e) => setReminderAt(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
             <input
               type="text"
@@ -155,6 +221,11 @@ const TodoForm: React.FC<TodoFormProps> = ({ todo, onSubmit, onCancel, onAddSucc
           />
         </div>
 
+        {validationError && (
+          <div className="mt-2 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+            {validationError}
+          </div>
+        )}
         <div className="mt-6 flex space-x-3">
           <button
             type="submit"

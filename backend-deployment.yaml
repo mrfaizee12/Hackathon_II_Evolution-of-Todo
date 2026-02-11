@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: faizananjum12/backend:v3
+        image: backend:1.0.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8007

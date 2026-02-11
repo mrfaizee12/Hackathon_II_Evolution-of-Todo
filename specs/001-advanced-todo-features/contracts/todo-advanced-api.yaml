@@ -1,0 +1,213 @@
+openapi: 3.0.3
+info:
+  title: Advanced Todo Features API
+  description: API extensions for recurring tasks, due dates, and reminders
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Development server
+paths:
+  /api/v1/todos/{id}/recurrence:
+    put:
+      summary: Set or update recurrence settings for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the todo item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recurrence_type:
+                  type: string
+                  enum: [none, daily, weekly, monthly]
+                  description: Frequency of recurrence
+                recurrence_interval:
+                  type: integer
+                  minimum: 1
+                  description: Interval multiplier for recurrence
+                end_date:
+                  type: string
+                  format: date-time
+                  description: When recurrence should stop (optional)
+              required:
+                - recurrence_type
+      responses:
+        '200':
+          description: Recurrence settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Invalid recurrence settings
+        '404':
+          description: Todo item not found
+    delete:
+      summary: Remove recurrence settings from a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the todo item
+      responses:
+        '200':
+          description: Recurrence settings removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '404':
+          description: Todo item not found
+
+  /api/v1/todos/{id}/due-date:
+    put:
+      summary: Set or update due date for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the todo item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                due_date:
+                  type: string
+                  format: date-time
+                  description: Due date for the task (must be in future)
+              required:
+                - due_date
+      responses:
+        '200':
+          description: Due date updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Invalid due date (past date or invalid format)
+        '404':
+          description: Todo item not found
+
+  /api/v1/todos/{id}/reminder:
+    put:
+      summary: Configure reminder for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the todo item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reminder_at:
+                  type: string
+                  format: date-time
+                  description: When to send reminder (before due date)
+              required:
+                - reminder_at
+      responses:
+        '200':
+          description: Reminder configured successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          description: Invalid reminder time (after due date or past time)
+        '404':
+          description: Todo item not found
+
+  /api/v1/todos/upcoming:
+    get:
+      summary: Get upcoming tasks with due dates
+      parameters:
+        - name: days_ahead
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 7
+          description: Number of days to look ahead for due tasks
+        - name: include_overdue
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include overdue tasks
+      responses:
+        '200':
+          description: List of upcoming tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+
+components:
+  schemas:
+    Todo:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the todo item
+        title:
+          type: string
+          description: Title of the todo item
+        completed:
+          type: boolean
+          description: Whether the todo item is completed
+        recurrence_type:
+          type: string
+          enum: [none, daily, weekly, monthly]
+          description: Frequency of recurrence
+        recurrence_interval:
+          type: integer
+          description: Interval multiplier for recurrence
+        next_occurrence:
+          type: string
+          format: date-time
+          description: When the next recurring instance should be created
+        due_date:
+          type: string
+          format: date-time
+          description: When the task is due (future dates only)
+        reminder_at:
+          type: string
+          format: date-time
+          description: When to send reminder notification
+        created_at:
+          type: string
+          format: date-time
+          description: When the todo item was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the todo item was last updated
+      required:
+        - id
+        - title
+        - completed

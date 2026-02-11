@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-service
+  namespace: todo-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-service
+  template:
+    metadata:
+      labels:
+        app: todo-service
+    spec:
+      containers:
+      - name: todo-service
+        image: todo-service:5.0.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8001
+        env:
+        - name: PYTHONPATH
+          value: "/app:/app/backend"
+        - name: PORT
+          value: "8001"
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: SECRET_KEY
+        - name: ALGORITHM
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ALGORITHM
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: ACCESS_TOKEN_EXPIRE_MINUTES
+        - name: OPENROUTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: todo-app-secrets
+              key: OPENROUTER_API_KEY
+        - name: EVENT_BUS_TYPE
+          value: "redpanda"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-service
+  namespace: todo-chatbot
+spec:
+  selector:
+    app: todo-service
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP

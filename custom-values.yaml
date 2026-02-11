@@ -1,0 +1,44 @@
+# Custom values for deploying with external Neon database
+
+# Backend configuration
+backend:
+  image:
+    repository: faizananjum12/backend
+    tag: v3  # Updated to use v3 as specified in the plan
+    pullPolicy: IfNotPresent
+  replicas: 1  # Reduced for resource conservation
+  service:
+    type: ClusterIP
+    port: 8007  # Changed from 8000 to 8007 to match Docker Compose
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Frontend configuration
+frontend:
+  image:
+    repository: faizananjum12/frontend
+    tag: v1
+    pullPolicy: IfNotPresent
+  replicas: 1
+  service:
+    type: ClusterIP  # Changed from LoadBalancer to ClusterIP for resource conservation
+    port: 3000
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+# Disable internal PostgreSQL since we're using external Neon DB
+postgresql:
+  enabled: false
+
+# Additional configuration for external database connection
+# Note: The deployment template has been modified to use external secrets directly
